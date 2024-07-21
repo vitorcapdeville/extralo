@@ -1,7 +1,7 @@
 import pandas as pd
 
-from pyetl.destinations import Destination
-from pyetl.sources import Source
+from extralo.destinations import Destination
+from extralo.sources import Source
 from logging import Logger
 
 
