@@ -5,6 +5,9 @@ description = "ETL for Python"
 requires-python = ">=3.9"
 dependencies = ["pandas", "sqlalchemy"]
 
+[tool.ruff]
+line-length = 120
+
 [tool.semantic_release]
 version_variables = ["pyproject.toml:version"]
 build_command = "python -m pip install build && python -m build"
@@ -81,4 +84,3 @@ env = "GH_TOKEN"
 [tool.semantic_release.publish]
 dist_glob_patterns = ["dist/*"]
 upload_to_vcs_release = true
-

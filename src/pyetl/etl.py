@@ -4,6 +4,7 @@ from pyetl.destinations import Destination
 from pyetl.sources import Source
 from logging import Logger
 
+
 class ETL:
     def __init__(self, source: Source, destination: Destination, logger: Logger) -> None:
         self._source = source
