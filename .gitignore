@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/\
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.egg-info/
+*.db
+main.py
