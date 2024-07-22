@@ -68,3 +68,7 @@ jobs:
         if: steps.release.outputs.released == 'true'
         with:
           repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: steps.release.outputs.released == 'true'
