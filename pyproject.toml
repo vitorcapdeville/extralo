@@ -61,6 +61,9 @@ patch_tags = [
     "🥅",
     "👽️",
     "💬",
+    "📝",
+    "🔧",
+    "🚀",
 ]
 
 [tool.semantic_release.remote]
