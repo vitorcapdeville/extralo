@@ -36,6 +36,10 @@ jobs:
       #     publish_dir: .tox/docs_out/
       #     force_orphan: true
   cd:
+    environment:
+      name: test-pypi
+      url: https://test.pypi.org/p/extralo
+
     permissions:
       id-token: write
       contents: write
