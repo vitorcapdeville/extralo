@@ -18,8 +18,9 @@ class ETL:
         self.load(data)
 
     def extract(self) -> pd.DataFrame:
+        self._logger.info(f"Starting extraction for {self._source}")
         data = self._source.extract()
-        self._logger.info(f"Extracted {len(data)} records from {self._source.__class__.__name__}")
+        self._logger.info(f"Extracted {len(data)} records from {self._source}")
         return data
 
     def transform(self, data) -> pd.DataFrame:
@@ -27,5 +28,6 @@ class ETL:
         return data
 
     def load(self, data) -> pd.DataFrame:
-        self._logger.info(f"Loaded {len(data)} records into {self._destination.__class__.__name__}")
-        return self._destination.load(data)
+        data = self._destination.load(data)
+        self._logger.info(f"Loaded {len(data)} records into {self._destination}")
+        return data
