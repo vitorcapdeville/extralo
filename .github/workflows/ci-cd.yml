@@ -24,6 +24,7 @@ jobs:
           pip install tox
       - name: run tests
         run: tox -e tests
+
       # - name: build docs
       #   run: |
       #     tox -e docs
