@@ -11,8 +11,3 @@ class Transformer(ABC):
 
     def __str__(self) -> str:
         return self.__repr__()
-
-
-class NullTransformer(Transformer):
-    def transform(self, data):
-        return data

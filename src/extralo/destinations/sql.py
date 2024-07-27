@@ -1,24 +1,7 @@
-from abc import ABC, abstractmethod
-
-import pandas as pd
 import sqlalchemy as sa
 
-
-class Destination(ABC):
-    @abstractmethod
-    def load(self, data: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-
-class MemoryDestination(Destination):
-    def load(self, data: pd.DataFrame) -> pd.DataFrame:
-        return data
+from extralo.destination import Destination
+from extralo.typing import DataFrame
 
 
 class SQLDestination(Destination):
@@ -28,7 +11,7 @@ class SQLDestination(Destination):
         self._if_exists = if_exists
         self._schema = schema
 
-    def load(self, data: pd.DataFrame) -> pd.DataFrame:
+    def load(self, data: DataFrame) -> DataFrame:
         data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
         return data
 

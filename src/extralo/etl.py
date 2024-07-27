@@ -1,10 +1,10 @@
 import logging
 
-import pandas as pd
-
-from extralo.destinations import Destination
-from extralo.sources import Source
-from extralo.transformers import Transformer, NullTransformer
+from extralo.destination import Destination
+from extralo.source import Source
+from extralo.transformer import Transformer
+from extralo.transformers import NullTransformer
+from extralo.typing import DataFrame
 
 
 class ETL:
@@ -14,23 +14,24 @@ class ETL:
         self._transformer = transformer
         self._logger = logging.getLogger("etl")
 
-    def execute(self):
+    def execute(self) -> DataFrame:
         data = self.extract()
         data = self.transform(data)
-        self.load(data)
+        data = self.load(data)
+        return data
 
-    def extract(self) -> pd.DataFrame:
+    def extract(self) -> DataFrame:
         self._logger.info(f"Starting extraction for {self._source}")
         data = self._source.extract()
         self._logger.info(f"Extracted {len(data)} records from {self._source}")
         return data
 
-    def transform(self, data) -> pd.DataFrame:
+    def transform(self, data) -> DataFrame:
         data = self._transformer.transform(data)
         self._logger.info(f"Tranformed {len(data)} records with {self._transformer}")
         return data
 
-    def load(self, data) -> pd.DataFrame:
+    def load(self, data) -> DataFrame:
         data = self._destination.load(data)
         self._logger.info(f"Loaded {len(data)} records into {self._destination}")
         return data
