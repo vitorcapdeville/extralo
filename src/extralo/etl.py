@@ -1,6 +1,6 @@
 import inspect
 import logging
-from typing import Optional
+from typing import Optional, _TypedDictMeta, get_type_hints
 
 import pandera as pa
 
@@ -46,6 +46,20 @@ class ETL:
         if self._before_schemas is not None:
             validate_steps(set(self._sources.keys()), "extract", set(self._before_schemas.keys()), "before_schema")
         validate_steps(set(self._sources.keys()), "extract", set(trasnform_args[1:]), "transform")
+
+        transform_output = get_type_hints(self._transformer.transform).get("return", None)
+        if transform_output is None or not isinstance(transform_output, _TypedDictMeta):
+            logging.getLogger("etl").warning(
+                "Transformer output type hints are not a TypedDict, validation will be done only at runtime."
+            )
+            return
+
+        transform_output_dict = transform_output.__annotations__
+        if self._after_schemas is not None:
+            validate_steps(
+                set(transform_output_dict.keys()), "transform", set(self._after_schemas.keys()), "after_schema"
+            )
+        validate_steps(set(transform_output_dict.keys()), "transform", set(self._destinations.keys()), "load")
 
     def execute(self) -> DataFrame:
         data = self.extract()
