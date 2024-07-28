@@ -19,7 +19,7 @@ def test_etl_delegates_to_components():
     after_schema.validate = Mock(return_value=data)
 
     etl = ETL(
-        source=source, transformer=trans, destinations=[dest], before_schema=before_schema, after_schema=after_schema
+        sources=source, transformer=trans, destinations=[dest], before_schema=before_schema, after_schema=after_schema
     )
 
     etl.execute()
