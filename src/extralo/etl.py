@@ -8,9 +8,11 @@ from extralo.typing import DataFrame
 
 
 class ETL:
-    def __init__(self, source: Source, destination: Destination, transformer: Transformer = NullTransformer()) -> None:
+    def __init__(
+        self, source: Source, destinations: list[Destination], transformer: Transformer = NullTransformer()
+    ) -> None:
         self._source = source
-        self._destination = destination
+        self._destinations = destinations
         self._transformer = transformer
         self._logger = logging.getLogger("etl")
 
@@ -18,7 +20,6 @@ class ETL:
         data = self.extract()
         data = self.transform(data)
         data = self.load(data)
-        return data
 
     def extract(self) -> DataFrame:
         self._logger.info(f"Starting extraction for {self._source}")
@@ -32,6 +33,6 @@ class ETL:
         return data
 
     def load(self, data) -> DataFrame:
-        data = self._destination.load(data)
-        self._logger.info(f"Loaded {len(data)} records into {self._destination}")
-        return data
+        for destination in self._destinations:
+            destination.load(data)
+            self._logger.info(f"Loaded {len(data)} records into {destination}")
