@@ -10,9 +10,10 @@ from extralo.typing import DataFrame
 class DataOutput:
     name: str
     data: DataFrame
+    schema: type[pa.DataFrameModel] = pa.DataFrameModel
 
-    def validate(self, schema: type[pa.DataFrameModel]) -> DataFrame:
-        return schema.validate(self.data, lazy=True)
+    def validate(self) -> DataFrame:
+        return self.schema.validate(self.data, lazy=True)
 
 
 class Transformer(ABC):
