@@ -1,16 +1,7 @@
-import logging
-
 from .destinations import MemoryDestination, SQLDestination
 from .etl import ETL
 from .sources import CSVSource, SQLSource, XLSXSource
 from .transformers import NullTransformer
-
-_default_logger = logging.getLogger("etl")
-_default_logger.setLevel(logging.INFO)
-_default_formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-_default_handler = logging.StreamHandler()
-_default_handler.setFormatter(_default_formatter)
-_default_logger.addHandler(_default_handler)
 
 
 __all__ = ["ETL", "CSVSource", "SQLSource", "XLSXSource", "SQLDestination", "MemoryDestination", "NullTransformer"]

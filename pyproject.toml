@@ -6,13 +6,11 @@ requires-python = ">=3.9"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = ["etl", "data", "data-engineering"]
-authors = [
-    { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
-]
+authors = [{ name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" }]
 maintainers = [
     { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
 ]
-dependencies = ["pandas", "sqlalchemy"]
+dependencies = ["pandas", "sqlalchemy", "pandera"]
 
 [tool.ruff]
 line-length = 120
