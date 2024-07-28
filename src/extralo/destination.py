@@ -5,7 +5,7 @@ from extralo.typing import DataFrame
 
 class Destination(ABC):
     @abstractmethod
-    def load(self, data: DataFrame) -> DataFrame:
+    def load(self, data: DataFrame):
         raise NotImplementedError
 
     def __repr__(self) -> str:
