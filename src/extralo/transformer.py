@@ -5,7 +5,7 @@ from extralo.typing import DataFrame
 
 class Transformer(ABC):
     @abstractmethod
-    def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
+    def transform(self, **kwargs: DataFrame) -> dict[str, DataFrame]:
         raise NotImplementedError
 
     def __repr__(self) -> str:

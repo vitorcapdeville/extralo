@@ -47,7 +47,7 @@ class ETL:
         return {name: schema.validate(data[name], lazy=True) for name, schema in self._before_schemas.items()}
 
     def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
-        data = self._transformer.transform(data)
+        data = self._transformer.transform(**data)
         logging.getLogger("etl").info(f"Tranformed data with {self._transformer}")
         return data
 
