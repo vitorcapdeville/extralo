@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandera as pa
 from pandera.typing.common import DataFrameBase
@@ -18,10 +18,10 @@ class TolerableDataFrameModel(pa.DataFrameModel):
     def validate(
         cls: type[TDataFrameModel],
         check_obj: DataFrame,
-        head: int | None = None,
-        tail: int | None = None,
-        sample: int | None = None,
-        random_state: int | None = None,
+        head: Optional[int] = None,
+        tail: Optional[int] = None,
+        sample: Optional[int] = None,
+        random_state: Optional[int] = None,
         lazy: bool = False,
         inplace: bool = False,
     ) -> DataFrameBase[TDataFrameModel]:
