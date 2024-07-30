@@ -56,7 +56,7 @@ default = "semantic-release <semantic-release>"
 [tool.semantic_release.commit_parser_options]
 major_tags = ["💥"]
 minor_tags = ["✨"]
-patch_tags = ["🚑️", "🔒️", "🐛", "⚡️", "🥅", "👽️", "💬", "📝", "🔧", "🚀"]
+patch_tags = ["🚑️", "🔒️", "🐛", "⚡️", "🥅", "👽️", "💬", "📝", "🔧", "🚀", "♻️"]
 
 [tool.semantic_release.remote]
 name = "origin"
