@@ -1,5 +1,6 @@
 from extralo.transformers.null import NullTransformer
 import pandas as pd
+from pandas.testing import assert_frame_equal
 
 
 def test_null_transformer_transforms_data():
@@ -8,4 +9,4 @@ def test_null_transformer_transforms_data():
 
     transformed_data = transformer.transform(data)
 
-    assert transformed_data.equals(data)
+    assert_frame_equal(transformed_data["data"], data)
