@@ -1,5 +1,6 @@
 import inspect
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, _TypedDictMeta, get_type_hints
 
 import pandera as pa
@@ -70,11 +71,19 @@ class ETL:
 
     def extract(self) -> dict[str, DataFrame]:
         data = {}
+        futures = []
         logger = logging.getLogger("etl")
-        for name, source in self._sources.items():
-            logger.info(f"Starting extraction for {source}")
-            data[name] = source.extract()
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for name, source in self._sources.items():
+                logger.info(f"Starting extraction for {source}")
+                future = executor.submit(source.extract)
+                futures.append((name, future))
+
+        for name, future in futures:
+            data[name] = future.result()  # Espera a conclusão do trabalho
             logger.info(f"Extracted {len(data[name])} records from {source}")
+
         return data
 
     def before_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
@@ -101,7 +110,17 @@ class ETL:
 
         validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
 
-        for name, destinations in self._destinations.items():
-            for destination in destinations:
-                destination.load(data[name])
-                logger.info(f"Loaded {len(data[name])} records to {destination}")
+        futures = []
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for name, destinations in self._destinations.items():
+                data_to_load = data[name]
+                size = len(data_to_load)
+                for destination in destinations:
+                    logger.info(f"Starting load of {size} records to {destination}")
+                    future = executor.submit(destination.load, data_to_load)
+                    futures.append((size, destination, future))
+
+        for size, dest, future in futures:
+            future.result()  # Espera a conclusão do trabalho
+            logger.info(f"Loaded {size} records to {dest}")
