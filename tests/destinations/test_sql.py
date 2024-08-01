@@ -1,6 +1,8 @@
 import pandas as pd
+import pytest
 import sqlalchemy as sa
-from extralo.destinations.sql import SQLDestination
+from extralo.destinations.sql import SQLDestination, SQLAppendDestination
+from pandas.testing import assert_frame_equal
 
 
 def test_sql_destination_load():
@@ -22,4 +24,45 @@ def test_sql_destination_load():
 
     # Assert that the table exists in the database
     data_loaded_via_query = pd.read_sql("SELECT * FROM test_table", engine)
-    assert data_loaded_via_query.equals(data)
+    assert_frame_equal(data_loaded_via_query, data)
+
+
+def test_sql_append_destination_load():
+    # Create a test database and table
+    engine = sa.create_engine("sqlite:///:memory:")
+    data = pd.DataFrame({"id": [2, 2, 2], "name": ["John", "Alice", "Bob"]})
+    data.to_sql("test_table", engine, index=False)
+
+    # Create an SQLAppendDestination instance
+    table = "test_table"
+    schema = None
+    group_column = "id"
+    group_value = 2
+    sql_append_destination = SQLAppendDestination(engine, table, schema, group_column, group_value)
+
+    # Load data using SQLAppendDestination
+    sql_append_destination.load(data)
+    sql_append_destination.load(data)
+
+    # Get the loaded data from the database
+    loaded_data = pd.read_sql("SELECT * FROM test_table", engine)
+
+    # Assert that the loaded data matches the expected DataFrame
+    assert_frame_equal(loaded_data, data)
+
+
+def test_sql_append_destination_load_fails_if_group_columns_does_not_exist():
+    # Create a test database and table
+    engine = sa.create_engine("sqlite:///:memory:")
+    data = pd.DataFrame({"id": [2, 2, 2], "name": ["John", "Alice", "Bob"]})
+    data.to_sql("test_table", engine, index=False)
+
+    # Create an SQLAppendDestination instance
+    table = "test_table"
+    schema = None
+    group_column = "not_there"
+    group_value = 2
+    sql_append_destination = SQLAppendDestination(engine, table, schema, group_column, group_value)
+
+    with pytest.raises(KeyError, match="not found"):
+        sql_append_destination.load(data)

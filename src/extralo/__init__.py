@@ -1,4 +1,11 @@
-from .destinations import NullDestination, SQLDestination
+from .destinations import (
+    NullDestination,
+    SQLDestination,
+    CSVAppendDestination,
+    CSVDestination,
+    XLSXDestination,
+    SQLAppendDestination,
+)
 from .etl import ETL
 from .sources import CSVSource, SQLSource, XLSXSource
 from .transformers import NullTransformer
@@ -13,4 +20,8 @@ __all__ = [
     "NullDestination",
     "NullTransformer",
     "TolerableDataFrameModel",
+    "CSVAppendDestination",
+    "CSVDestination",
+    "XLSXDestination",
+    "SQLAppendDestination",
 ]
