@@ -56,7 +56,6 @@ Lets create a SQLite database to use as destination:
 ```python
 from sqlalchemy import create_engine
 
-# Create a SQLite database
 engine = create_engine("sqlite:///data.sqlite")
 ```
 
@@ -164,14 +163,10 @@ before_schema = pa.DataFrameSchema(
 )
 
 etl = ETL(
-    sources={
-        "data": CSVSource("data.csv"),
-    },
+    sources={"data": CSVSource("data.csv")},
     before_schemas={"data": before_schema},
     transformer=MyTransformer(),
-    after_schemas={
-        "data": after_schema,
-    },
+    after_schemas={"data": after_schema},
     destinations={
         "data": [
             SQLDestination(engine, "data_group", None, if_exists="replace"),

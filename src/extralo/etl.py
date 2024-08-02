@@ -1,6 +1,6 @@
 import inspect
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, _TypedDictMeta, get_type_hints
 
 import pandera as pa
@@ -71,18 +71,19 @@ class ETL:
 
     def extract(self) -> dict[str, DataFrame]:
         data = {}
-        futures = []
+        futures = {}
         logger = logging.getLogger("etl")
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, source in self._sources.items():
                 logger.info(f"Starting extraction for {source}")
                 future = executor.submit(source.extract)
-                futures.append((name, future))
+                futures[future] = name
 
-        for name, future in futures:
-            data[name] = future.result()  # Espera a conclusão do trabalho
-            logger.info(f"Extracted {len(data[name])} records from {source}")
+            for future in as_completed(futures):
+                name = futures[future]
+                data[name] = future.result()
+                logger.info(f"Extracted {len(data[name])} records from {source}")
 
         return data
 
@@ -110,7 +111,7 @@ class ETL:
 
         validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
 
-        futures = []
+        futures = {}
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
@@ -119,8 +120,9 @@ class ETL:
                 for destination in destinations:
                     logger.info(f"Starting load of {size} records to {destination}")
                     future = executor.submit(destination.load, data_to_load)
-                    futures.append((size, destination, future))
+                    futures[future] = (size, destination)
 
-        for size, dest, future in futures:
-            future.result()  # Espera a conclusão do trabalho
-            logger.info(f"Loaded {size} records to {dest}")
+            for future in as_completed(futures):
+                size, dest = futures[future]
+                future.result()  # Espera a conclusão do trabalho
+                logger.info(f"Loaded {size} records to {dest}")
