@@ -15,19 +15,19 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: |
+              3.8
+              3.9
+              3.10
       - name: install tox
         run: |
-          pip install tox
-      - name: run tests
-        run: tox -e tests
+          pip install tox>=4.0
+      - name: run tests and docs
+        run: tox --parallel
 
-      - name: build docs
-        run: |
-          tox -e docs
       - name: deploy docs
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
