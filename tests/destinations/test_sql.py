@@ -17,7 +17,10 @@ def test_sql_destination_load():
     sql_destination = SQLDestination(engine, table_name, schema, if_exists)
 
     # Load data using SQLDestination
-    loaded_data = sql_destination.load(data)
+    sql_destination.load(data)
+
+    # Get the loaded data from the database
+    loaded_data = pd.read_sql("SELECT * FROM test_table", engine)
 
     # Assert that the loaded data matches the expected DataFrame
     assert loaded_data.equals(data)

@@ -10,10 +10,12 @@ authors = [{ name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" }]
 maintainers = [
     { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
 ]
-dependencies = ["pandas", "sqlalchemy", "pandera"]
+dependencies = ["pandas", "pandera"]
+
+[project.optional-dependencies]
+sql = ["sqlalchemy"]
 
 [tool.ruff]
-# Set the maximum line length to 79.
 line-length = 120
 
 [tool.ruff.lint]
