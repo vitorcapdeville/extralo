@@ -1,3 +1,3 @@
-import pandas as pd
+from pandas import DataFrame
 
-DataFrame = pd.DataFrame
+__all__ = ["DataFrame"]
