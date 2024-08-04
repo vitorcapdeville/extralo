@@ -1,6 +1,6 @@
 [project]
 name = "extralo"
-version = "0.9.3"
+version = "0.9.4"
 description = "ETL for Python"
 requires-python = ">=3.9"
 readme = "README.md"
