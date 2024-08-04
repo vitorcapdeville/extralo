@@ -1,29 +1,39 @@
 import inspect
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional, _TypedDictMeta, get_type_hints
-
-import pandera as pa
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
 
 from extralo.destination import Destination
 from extralo.source import Source
 from extralo.transformer import Transformer
 from extralo.transformers import NullTransformer
-from extralo.typing import DataFrame
+from extralo.typing import DataFrame, DataFrameModel
 
 
 class IncompatibleStepsError(Exception):
-    def __init__(self, step_base: str, keys_base: set, step: str, keys: set) -> None:
+    """Exception raised when two steps in a process are incompatible.
+
+    Attributes:
+        step_base (str): The name of the base step.
+        keys_base (set[str]): The keys associated with the base step.
+        step (str): The name of the incompatible step.
+        keys (set[str]): The keys associated with the incompatible step.
+    """
+
+    def __init__(self, step_base: str, keys_base: set[str], step: str, keys: set[str]) -> None:
         self.step_base = step_base
         self.step = step
         self.keys_base = keys_base
         self.keys = keys
 
     def __str__(self) -> str:
-        return f"Step '{self.step}' with keys {self.keys} is incompatible with step '{self.step_base}' with keys {self.keys_base}"
+        return (
+            f"Step '{self.step}' with keys {self.keys} is incompatible with step '{self.step_base}' "
+            f"with keys {self.keys_base}"
+        )
 
 
-def validate_steps(step1_keys: set, step1_name: str, step2_keys: set, step2_name: str):
+def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str], step2_name: str) -> None:
     if step1_keys != step2_keys:
         raise IncompatibleStepsError(step1_name, step1_keys, step2_name, step2_keys)
 
@@ -34,7 +44,8 @@ class ETL:
     The ETL class provide functionality around the extract, load and transform operations.
     The main functionalities are:
 
-    - Ensure that the process will be executed in the correct order, and the data will only be loaded if satisfies the provided schema.
+    - Ensure that the process will be executed in the correct order, and the data will only be loaded if satisfies the
+        provided schema.
     - Allow the use of multiple sources.
     - Allow the use of multiple destinations for a single data.
     - Allow the use of different destinations for different data.
@@ -42,41 +53,48 @@ class ETL:
     - Run I/O operations in parallel, using threads.
     - Explicitly define where the data is comming from, what is happening with it and where it is going.
 
-    The pipeline relies on dictionaries to define sources, validators and destinations. The keys of the dictionaries are used to match the data between the steps.
+    The pipeline relies on dictionaries to define sources, validators and destinations. The keys of the dictionaries are
+    used to match the data between the steps.
 
-    In the earlier steps, it's possible to validate the match of the keys between the steps, to ensure that the data is being processed correctly.
+    In the earlier steps, it's possible to validate the match of the keys between the steps, to ensure that the data is
+    being processed correctly.
 
-    However, in the transform step, it's not possible to validated the keys, since the transformer can change the keys of the data. In this case, the validation will be done only at runtime.
+    However, in the transform step, it's not possible to validated the keys, since the transformer can change the keys
+    of the data. In this case, the validation will be done only at runtime.
 
-    This can be resolved using return type annotations and the `TypedDict` from `typing` module. If the transformer return a `TypedDict`, the keys will be validated at initialization.
+    This can be resolved using return type annotations and the `TypedDict` from `typing` module. If the transformer
+    return a `TypedDict`, the keys will be validated at initialization.
 
     Args:
         sources (dict[str, Source]): A dictionary with the sources to extract data from.
         destinations (dict[str, list[Destination]]): A dictionary with the destinations to load data to.
-            Each value must be a list of destinations, and the data with that key will be loaded to all the destionations provided in the list.
+            Each value must be a list of destinations, and the data with that key will be loaded to all the
+            destionations provided in the list.
         transformer (Transformer, optional): A transformer to transform the data. Defaults to NullTransformer().
-        before_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to validate the data before the transformation. Defaults to None.
-        after_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to validate the data after the transformation. Defaults to None.
+        before_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
+            validate the data before the transformation. Defaults to None.
+        after_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
+            validate the data after the transformation. Defaults to None.
     """
 
     def __init__(
         self,
         sources: dict[str, Source],
         destinations: dict[str, list[Destination]],
-        transformer: Transformer = NullTransformer(),
-        before_schemas: Optional[dict[str, type[pa.DataFrameModel]]] = None,
-        after_schemas: Optional[dict[str, type[pa.DataFrameModel]]] = None,
+        transformer: Optional[Transformer] = None,
+        before_schemas: Optional[dict[str, DataFrameModel]] = None,
+        after_schemas: Optional[dict[str, DataFrameModel]] = None,
     ) -> None:
         self._sources = sources
         self._destinations = destinations
-        self._transformer = transformer
+        self._transformer = transformer or NullTransformer()
         self._before_schemas = before_schemas
         self._after_schemas = after_schemas
 
         trasnform_args = inspect.getargs(self._transformer.transform.__code__).args
         if self._before_schemas is not None:
-            validate_steps(set(self._sources.keys()), "extract", set(self._before_schemas.keys()), "before_schema")
-        validate_steps(set(self._sources.keys()), "extract", set(trasnform_args[1:]), "transform")
+            _validate_steps(set(self._sources.keys()), "extract", set(self._before_schemas.keys()), "before_schema")
+        _validate_steps(set(self._sources.keys()), "extract", set(trasnform_args[1:]), "transform")
 
         transform_output = get_type_hints(self._transformer.transform).get("return", None)
         if transform_output is None or not isinstance(transform_output, _TypedDictMeta):
@@ -87,18 +105,20 @@ class ETL:
 
         transform_output_dict = transform_output.__annotations__
         if self._after_schemas is not None:
-            validate_steps(
+            _validate_steps(
                 set(transform_output_dict.keys()), "transform", set(self._after_schemas.keys()), "after_schema"
             )
-        validate_steps(set(transform_output_dict.keys()), "transform", set(self._destinations.keys()), "load")
+        _validate_steps(set(transform_output_dict.keys()), "transform", set(self._destinations.keys()), "load")
 
     def execute(self) -> None:
         """Execute the ETL process.
 
-        Extract the data from the sources, validate it against the before schemas, transform it, validate it against the after schemas and load it to the destinations.
+        Extract the data from the sources, validate it against the before schemas, transform it, validate it against
+        the after schemas and load it to the destinations.
 
         Returns:
-            This method does not return anything, and it's used for it's only side effect: load the data to the destinations.
+            This method does not return anything, and it's used for it's only side effect: load the data to the
+                destinations.
         """
         data = self.extract()
         data = self.before_validate(data)
@@ -122,7 +142,7 @@ class ETL:
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, source in self._sources.items():
                 logger.info(f"Starting extraction for {source}")
-                future = executor.submit(source.extract)
+                future: Future[DataFrame] = executor.submit(source.extract)
                 futures[future] = name
 
             for future in as_completed(futures):
@@ -159,7 +179,8 @@ class ETL:
             data (dict[str, DataFrame]): The data to be transformed.
 
         Returns:
-            dict[str, DataFrame]: A dictionary with the transformed data. The keys could be different from the input data.
+            dict[str, DataFrame]: A dictionary with the transformed data. The keys could be different from the
+                input data.
         """
         data = self._transformer.transform(**data)
         logging.getLogger("etl").info(f"Tranformed data with {self._transformer}")
@@ -180,7 +201,7 @@ class ETL:
         if self._after_schemas is None:
             return data
 
-        validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
+        _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
 
         return {name: schema.validate(data[name], lazy=True) for name, schema in self._after_schemas.items()}
 
@@ -194,7 +215,7 @@ class ETL:
         """
         logger = logging.getLogger("etl")
 
-        validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
+        _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
 
         futures = {}
 

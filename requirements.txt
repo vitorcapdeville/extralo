@@ -3,6 +3,7 @@ mkdocs-material
 mkdocstrings-python
 openpyxl
 pandas
+pandas-stubs
 pytest
 python-semantic-release
 sqlalchemy

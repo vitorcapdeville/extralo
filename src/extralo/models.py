@@ -1,21 +1,25 @@
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
-import pandera as pa
-from pandera.typing.common import DataFrameBase
+try:
+    import pandera as pa
+except ImportError as err:
+    raise ImportError(
+        "pandera is required to use TolerableDataFrameModel. Please install it via pip install pandera."
+    ) from err
+from pandera.api.dataframe.model import _CONFIG_OPTIONS, TDataFrameModel, _is_field
 
 from extralo.destinations.file import CSVAppendDestination
 from extralo.typing import DataFrame
-from pandera.api.dataframe.model import TDataFrameModel, _is_field, _CONFIG_OPTIONS
 
 
-class TolerableDataFrameModel(pa.DataFrameModel):
-    class Config:
-        failure_id = None
+class TolerableDataFrameModel(pa.DataFrameModel):  # noqa: D101
+    class Config:  # noqa: D106
+        failure_id: Optional[str] = None
         failure_destination = CSVAppendDestination("failure_cases.csv")
 
     @classmethod
-    def validate(
+    def validate(  # noqa: D102
         cls: type[TDataFrameModel],
         check_obj: DataFrame,
         head: Optional[int] = None,
@@ -24,9 +28,9 @@ class TolerableDataFrameModel(pa.DataFrameModel):
         random_state: Optional[int] = None,
         lazy: bool = False,
         inplace: bool = False,
-    ) -> DataFrameBase[TDataFrameModel]:
+    ) -> DataFrame:
         try:
-            check_obj = super().validate(check_obj, head, tail, sample, random_state, lazy, inplace)
+            return super().validate(check_obj, head, tail, sample, random_state, lazy, inplace)
         except pa.errors.SchemaErrors as errors:
             errors.message.pop("DATA", None)
             if errors.message != {}:
@@ -43,7 +47,8 @@ class TolerableDataFrameModel(pa.DataFrameModel):
             failure_cases["name"] = cls.Config.failure_id
             cls.Config.failure_destination.load(failure_cases)
             logging.getLogger("etl").info(
-                f"Loaded {len(failure_cases)} failure cases of {cls.Config.failure_id} to {cls.Config.failure_destination}"
+                f"Loaded {len(failure_cases)} failure cases of {cls.Config.failure_id} to "
+                f"{cls.Config.failure_destination}"
             )
         return check_obj
 
@@ -51,7 +56,7 @@ class TolerableDataFrameModel(pa.DataFrameModel):
     def _extract_config_options_and_extras(
         cls,
         config: Any,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         config_options, extras = {}, {}
         for name, value in vars(config).items():
             if name in _CONFIG_OPTIONS + ["failure_destination", "failure_id"]:

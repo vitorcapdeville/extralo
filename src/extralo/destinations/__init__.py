@@ -1,9 +1,7 @@
-from .null import NullDestination
-from .sql import SQLDestination, SQLAppendDestination
-from .file import CSVDestination, CSVAppendDestination, XLSXDestination
+from .file import CSVAppendDestination, CSVDestination, XLSXDestination
+from .sql import SQLAppendDestination, SQLDestination
 
 __all__ = [
-    "NullDestination",
     "SQLDestination",
     "CSVDestination",
     "CSVAppendDestination",

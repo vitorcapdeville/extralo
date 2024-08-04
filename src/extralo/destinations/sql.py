@@ -1,32 +1,83 @@
-from typing import Any
-import sqlalchemy as sa
+from typing import Any, Literal
 
 from extralo.destination import Destination
 from extralo.typing import DataFrame
 
 
 class SQLDestination(Destination):
-    def __init__(self, engine: sa.Engine, table: str, schema: str, if_exists: str) -> None:
+    """A class representing a SQL destination for loading data.
+
+    Args:
+        engine (sa.Engine): The SQLAlchemy engine to connect to the database.
+        table (str): The name of the table to load the data into.
+        schema (str): The name of the schema where the table resides.
+        if_exists (str): The action to take if the table already exists.
+    """
+
+    def __init__(self, engine: Any, table: str, schema: str, if_exists: Literal["fail", "replace", "append"]) -> None:
+        try:
+            import sqlalchemy  # noqa: F401
+        except ImportError as err:
+            raise ImportError(
+                "SQLAlchemy is required to use SQLDestination. Please install it with `pip install sqlalchemy`."
+            ) from err
         self._engine = engine
         self._table = table
         self._if_exists = if_exists
         self._schema = schema
 
-    def load(self, data: DataFrame) -> DataFrame:
+    def load(self, data: DataFrame) -> None:
+        """Loads the given DataFrame into an SQL table.
+
+        Args:
+            data (DataFrame): The DataFrame to be loaded.
+
+        Returns:
+            DataFrame: The loaded DataFrame.
+        """
         data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
-        return data
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table}, schema={self._schema}, if_exists={self._if_exists})"
 
 
 class SQLAppendDestination(SQLDestination):
-    def __init__(self, engine: sa.Engine, table: str, schema: str, group_column: str, group_value: Any) -> None:
+    """A destination class for appending data to an SQL table, overriding by group.
+
+    Args:
+        engine (sa.Engine): The SQLAlchemy engine object.
+        table (str): The name of the table.
+        schema (str): The name of the schema.
+        group_column (str): The name of the column used for grouping.
+        group_value (Any): The value of the group column.
+    """
+
+    def __init__(self, engine: Any, table: str, schema: str, group_column: str, group_value: Any) -> None:
+        try:
+            import sqlalchemy  # noqa: F401
+        except ImportError as err:
+            raise ImportError(
+                "SQLAlchemy is required to use SQLAppendDestination. Please install it with `pip install sqlalchemy`."
+            ) from err
+
         super().__init__(engine, table, schema, "append")
         self._group_column = group_column
         self._group_value = group_value
 
-    def load(self, data: DataFrame) -> DataFrame:
+    def load(self, data: DataFrame) -> None:
+        """Load data into the SQL table after deleting rows with a specific group value.
+
+        Args:
+            data (DataFrame): The data to be loaded into the table.
+
+        Returns:
+            DataFrame: The loaded data.
+
+        Raises:
+            KeyError: If the specified group column is not found in the table.
+        """
+        import sqlalchemy as sa
+
         insp = sa.inspect(self._engine)
         if insp.has_table(self._table, self._schema):
             metadata_obj = sa.MetaData()
@@ -37,4 +88,4 @@ class SQLAppendDestination(SQLDestination):
             with self._engine.begin() as conn:
                 conn.execute(stmt)
 
-        return super().load(data)
+        super().load(data)

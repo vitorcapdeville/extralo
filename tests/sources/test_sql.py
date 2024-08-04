@@ -1,6 +1,6 @@
 import pandas as pd
-from extralo.sources import SQLSource
 import sqlalchemy as sa
+from extralo.sources import SQLSource
 
 
 def test_sql_source_extract():
