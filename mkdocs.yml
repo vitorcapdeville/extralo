@@ -48,6 +48,15 @@ theme:
     - navigation.tabs
 nav:
   - ExTraLo: index.md
+  - User guide:
+      - user/index.md
+      - user/usage.md
+      - user/logging.md
+      - user/validate.md
+  - Developer guide:
+      - dev/index.md
+  - API Reference:
+      - reference/index.md
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -56,5 +65,3 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
-extra_css:
-  - css/code_select.css

@@ -6,6 +6,7 @@ __pycache__/
 *.xlsx
 *.xls
 *.xlsm
+*.sqlite
 *.egg-info/
 *.db
 main.py

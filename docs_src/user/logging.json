@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "verbose": {
+      "format": "{asctime} | {name} | {levelname:8} - {message}",
+      "datefmt": "%Y-%m-%d %H:%M:%S",
+      "style": "{"
+    }
+  },
+  "handlers": {
+    "stdout": {
+      "class": "logging.StreamHandler",
+      "formatter": "verbose",
+      "stream": "ext://sys.stdout"
+    },
+    "file": {
+      "class": "logging.FileHandler",
+      "formatter": "verbose",
+      "filename": "etl.log"
+    }
+  },
+  "loggers": {
+    "etl": {
+      "handlers": ["stdout", "file"],
+      "level": "INFO"
+    }
+  }
+}
