@@ -15,7 +15,8 @@ maintainers = [
 sql = ["sqlalchemy"]
 validation = ["pandera"]
 pandas = ["pandas"]
-all = ["sqlalchemy", "pandera", "pandas"]
+deltalake = ["deltalake"]
+all = ["sqlalchemy", "pandera", "pandas", "deltalake"]
 
 [tool.ruff]
 line-length = 120

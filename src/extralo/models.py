@@ -5,7 +5,7 @@ try:
     import pandera as pa
 except ImportError as err:
     raise ImportError(
-        "pandera is required to use TolerableDataFrameModel. Please install it via pip install pandera."
+        "pandera is required to use TolerableDataFrameModel. Please install it via `pip install pandera`."
     ) from err
 from pandera.api.dataframe.model import _CONFIG_OPTIONS, TDataFrameModel, _is_field
 

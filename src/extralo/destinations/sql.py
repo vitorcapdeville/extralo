@@ -31,9 +31,6 @@ class SQLDestination(Destination):
 
         Args:
             data (DataFrame): The DataFrame to be loaded.
-
-        Returns:
-            DataFrame: The loaded DataFrame.
         """
         data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
 
@@ -69,9 +66,6 @@ class SQLAppendDestination(SQLDestination):
 
         Args:
             data (DataFrame): The data to be loaded into the table.
-
-        Returns:
-            DataFrame: The loaded data.
 
         Raises:
             KeyError: If the specified group column is not found in the table.
