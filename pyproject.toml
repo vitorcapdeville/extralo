@@ -10,10 +10,12 @@ authors = [{ name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" }]
 maintainers = [
     { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
 ]
-dependencies = ["pandas", "pandera"]
 
 [project.optional-dependencies]
 sql = ["sqlalchemy"]
+validation = ["pandera"]
+pandas = ["pandas"]
+all = ["sqlalchemy", "pandera", "pandas"]
 
 [tool.ruff]
 line-length = 120
