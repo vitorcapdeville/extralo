@@ -25,17 +25,17 @@ jobs:
       - name: run tests
         run: tox -e tests
 
-      # - name: build docs
-      #   run: |
-      #     tox -e docs
-      # - name: deploy docs
-      #   uses: peaceiris/actions-gh-pages@v3
-      #   if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-      #   with:
-      #     publish_branch: gh-pages
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: .tox/docs_out/
-      #     force_orphan: true
+      - name: build docs
+        run: |
+          tox -e docs
+      - name: deploy docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .tox/docs_out/
+          force_orphan: true
   cd:
     needs: ci
     runs-on: ubuntu-latest
