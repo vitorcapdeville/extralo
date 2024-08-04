@@ -12,5 +12,6 @@ __pycache__/
 main.py
 .vscode/
 dist/
+build/
 site/
 .tox/
