@@ -1,5 +1,9 @@
+mkdocs
+mkdocs-material
+mkdocstrings-python
 openpyxl
 pandas
 pytest
 python-semantic-release
 sqlalchemy
+tox

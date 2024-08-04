@@ -29,6 +29,36 @@ def validate_steps(step1_keys: set, step1_name: str, step2_keys: set, step2_name
 
 
 class ETL:
+    """ETL - Extract, Load and Transform data from sources to destinations.
+
+    The ETL class provide functionality around the extract, load and transform operations.
+    The main functionalities are:
+
+    - Ensure that the process will be executed in the correct order, and the data will only be loaded if satisfies the provided schema.
+    - Allow the use of multiple sources.
+    - Allow the use of multiple destinations for a single data.
+    - Allow the use of different destinations for different data.
+    - Provides configurable logging for each step of the process.
+    - Run I/O operations in parallel, using threads.
+    - Explicitly define where the data is comming from, what is happening with it and where it is going.
+
+    The pipeline relies on dictionaries to define sources, validators and destinations. The keys of the dictionaries are used to match the data between the steps.
+
+    In the earlier steps, it's possible to validate the match of the keys between the steps, to ensure that the data is being processed correctly.
+
+    However, in the transform step, it's not possible to validated the keys, since the transformer can change the keys of the data. In this case, the validation will be done only at runtime.
+
+    This can be resolved using return type annotations and the `TypedDict` from `typing` module. If the transformer return a `TypedDict`, the keys will be validated at initialization.
+
+    Args:
+        sources (dict[str, Source]): A dictionary with the sources to extract data from.
+        destinations (dict[str, list[Destination]]): A dictionary with the destinations to load data to.
+            Each value must be a list of destinations, and the data with that key will be loaded to all the destionations provided in the list.
+        transformer (Transformer, optional): A transformer to transform the data. Defaults to NullTransformer().
+        before_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to validate the data before the transformation. Defaults to None.
+        after_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to validate the data after the transformation. Defaults to None.
+    """
+
     def __init__(
         self,
         sources: dict[str, Source],
@@ -62,7 +92,14 @@ class ETL:
             )
         validate_steps(set(transform_output_dict.keys()), "transform", set(self._destinations.keys()), "load")
 
-    def execute(self) -> DataFrame:
+    def execute(self) -> None:
+        """Execute the ETL process.
+
+        Extract the data from the sources, validate it against the before schemas, transform it, validate it against the after schemas and load it to the destinations.
+
+        Returns:
+            This method does not return anything, and it's used for it's only side effect: load the data to the destinations.
+        """
         data = self.extract()
         data = self.before_validate(data)
         data = self.transform(data)
@@ -70,6 +107,14 @@ class ETL:
         self.load(data)
 
     def extract(self) -> dict[str, DataFrame]:
+        """Extract the data from the provided sources and load it into a dictionary with same keys as the sources.
+
+        The extraction is done in parallel, using threads.
+        This method use the `etl` logger to log the extraction process, which can be customized by the user.
+
+        Returns:
+            dict[str, DataFrame]: A dictionary with the data extracted from the sources.
+        """
         data = {}
         futures = {}
         logger = logging.getLogger("etl")
@@ -88,17 +133,50 @@ class ETL:
         return data
 
     def before_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
+        """Validate the extracted data against the provided schemas.
+
+        If the before_schemas was not provided, no validation will be done and the data will be returned as is.
+
+        Args:
+            data (dict[str, DataFrame]): The data to be validated.
+
+        Returns:
+            dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
+                Uses the same keys as the input data.
+        """
         if self._before_schemas is None:
             return data
 
         return {name: schema.validate(data[name], lazy=True) for name, schema in self._before_schemas.items()}
 
     def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
+        """Transform the data extracted from the source according to the `Transformer` class provided.
+
+        This method use the `etl` logger to log the extraction process, which can be customized by the user.
+        The data from the sources will be passes to the `transform` method of the `Transformer` as keyword arguments.
+
+        Args:
+            data (dict[str, DataFrame]): The data to be transformed.
+
+        Returns:
+            dict[str, DataFrame]: A dictionary with the transformed data. The keys could be different from the input data.
+        """
         data = self._transformer.transform(**data)
         logging.getLogger("etl").info(f"Tranformed data with {self._transformer}")
         return data
 
     def after_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
+        """Validate the transformed data against the provided schemas.
+
+        If the after_schemas was not provided, no validation will be done and the data will be returned as is.
+
+        Args:
+            data (dict[str, DataFrame]): The data to be validated.
+
+        Returns:
+            dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
+                Uses the same keys as the input data.
+        """
         if self._after_schemas is None:
             return data
 
@@ -107,6 +185,13 @@ class ETL:
         return {name: schema.validate(data[name], lazy=True) for name, schema in self._after_schemas.items()}
 
     def load(self, data: dict[str, DataFrame]) -> None:
+        """Load the data to the provided destinations.
+
+        The data will be loaded in parallel, using threads.
+
+        Args:
+            data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
+        """
         logger = logging.getLogger("etl")
 
         validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
@@ -124,5 +209,5 @@ class ETL:
 
             for future in as_completed(futures):
                 size, dest = futures[future]
-                future.result()  # Espera a conclusão do trabalho
+                future.result()
                 logger.info(f"Loaded {size} records to {dest}")
