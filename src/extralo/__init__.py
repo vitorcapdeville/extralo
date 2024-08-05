@@ -1,6 +1,7 @@
 from .destinations import (
     CSVAppendDestination,
     CSVDestination,
+    DeltaLakeDestination,
     SQLAppendDestination,
     SQLDestination,
     XLSXDestination,
@@ -23,4 +24,5 @@ __all__ = [
     "CSVDestination",
     "XLSXDestination",
     "SQLAppendDestination",
+    "DeltaLakeDestination",
 ]

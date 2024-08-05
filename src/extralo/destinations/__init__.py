@@ -1,3 +1,4 @@
+from .delta_lake import DeltaLakeDestination
 from .file import CSVAppendDestination, CSVDestination, XLSXDestination
 from .sql import SQLAppendDestination, SQLDestination
 
@@ -7,4 +8,5 @@ __all__ = [
     "CSVAppendDestination",
     "XLSXDestination",
     "SQLAppendDestination",
+    "DeltaLakeDestination",
 ]
