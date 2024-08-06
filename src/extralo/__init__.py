@@ -8,7 +8,7 @@ from .destinations import (
 )
 from .etl import ETL
 from .models import TolerableDataFrameModel
-from .sources import CSVSource, SQLSource, XLSXSource
+from .sources import CSVSource, DeltaLakeSource, SQLSource, XLSXSource
 
 __all__ = [
     "ETL",
@@ -23,4 +23,5 @@ __all__ = [
     "XLSXDestination",
     "SQLAppendDestination",
     "DeltaLakeDestination",
+    "DeltaLakeSource",
 ]
