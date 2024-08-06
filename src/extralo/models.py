@@ -1,5 +1,7 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Literal, Optional
+
+from extralo.destination import Destination
 
 try:
     import pandera as pa
@@ -7,16 +9,26 @@ except ImportError as err:
     raise ImportError(
         "pandera is required to use TolerableDataFrameModel. Please install it via `pip install pandera`."
     ) from err
-from pandera.api.dataframe.model import _CONFIG_OPTIONS, TDataFrameModel, _is_field
+import pandera.errors
+from pandera.api.dataframe.model import TDataFrameModel, _is_field
+from pandera.api.dataframe.model_config import BaseConfig
 
-from extralo.destinations.file import CSVAppendDestination
 from extralo.typing import DataFrame
 
 
+class TolerableConfig(BaseConfig):  # noqa: D101
+    tolerate: Optional[set[Literal["DATA", "SCHEMA"]]] = None
+    failure_id: Optional[str] = None
+    failure_destination: Optional[Destination] = None
+
+
+_CONFIG_OPTIONS = [attr for attr in vars(TolerableConfig) if _is_field(attr)] + [
+    attr for attr in vars(BaseConfig) if _is_field(attr)
+]
+
+
 class TolerableDataFrameModel(pa.DataFrameModel):  # noqa: D101
-    class Config:  # noqa: D106
-        failure_id: Optional[str] = None
-        failure_destination = CSVAppendDestination("failure_cases.csv")
+    Config: type[BaseConfig] = TolerableConfig
 
     @classmethod
     def validate(  # noqa: D102
@@ -31,10 +43,21 @@ class TolerableDataFrameModel(pa.DataFrameModel):  # noqa: D101
     ) -> DataFrame:
         try:
             return super().validate(check_obj, head, tail, sample, random_state, lazy, inplace)
-        except pa.errors.SchemaErrors as errors:
-            errors.message.pop("DATA", None)
-            if errors.message != {}:
+        except pandera.errors.SchemaErrors as errors:
+            if cls.Config.tolerate is None:
+                cls.Config.tolerate = set()
+            not_tolerable_errors_found = set(errors.message.keys()) - set(cls.Config.tolerate)
+
+            if len(not_tolerable_errors_found) > 0:
+                logging.getLogger("etl").error(
+                    f"Found these errors {not_tolerable_errors_found} but only configured "
+                    f"to tolerate these errors {cls.Config.tolerate}"
+                )
                 raise errors from errors
+
+            if cls.Config.failure_destination is None:
+                return check_obj
+
             failure_cases = (
                 errors.failure_cases[["index", "check"]].drop_duplicates().sort_values("index").set_index("index")
             )
@@ -59,7 +82,7 @@ class TolerableDataFrameModel(pa.DataFrameModel):  # noqa: D101
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         config_options, extras = {}, {}
         for name, value in vars(config).items():
-            if name in _CONFIG_OPTIONS + ["failure_destination", "failure_id"]:
+            if name in _CONFIG_OPTIONS:
                 config_options[name] = value
             elif _is_field(name):
                 extras[name] = value

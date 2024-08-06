@@ -12,6 +12,7 @@ def test_tolerable_data_frame_model_calls_destination_load_on_fail():
 
     class TestModel(TolerableDataFrameModel):
         class Config:
+            tolerate = {"DATA"}
             failure_id = "teste_id"
             failure_destination = destination
 
