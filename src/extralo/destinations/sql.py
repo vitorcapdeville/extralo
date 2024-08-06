@@ -1,7 +1,8 @@
 from typing import Any, Literal
 
+import pandas as pd
+
 from extralo.destination import Destination
-from extralo.typing import DataFrame
 
 
 class SQLDestination(Destination):
@@ -26,11 +27,11 @@ class SQLDestination(Destination):
         self._if_exists = if_exists
         self._schema = schema
 
-    def load(self, data: DataFrame) -> None:
-        """Loads the given DataFrame into an SQL table.
+    def load(self, data: pd.DataFrame) -> None:
+        """Loads the given pandas DataFrame into an SQL table.
 
         Args:
-            data (DataFrame): The DataFrame to be loaded.
+            data (DataFrame): The pandas DataFrame to be loaded.
         """
         data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
 
@@ -61,7 +62,7 @@ class SQLAppendDestination(SQLDestination):
         self._group_column = group_column
         self._group_value = group_value
 
-    def load(self, data: DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> None:
         """Load data into the SQL table after deleting rows with a specific group value.
 
         Args:

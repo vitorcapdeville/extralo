@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Any
 
+import pandas as pd
+
 from extralo.source import Source
 from extralo.typing import DataFrame
 
@@ -28,12 +30,6 @@ class CSVSource(FileSource):
     """
 
     def __init__(self, file: str, **kwargs: Any) -> None:
-        try:
-            import pandas  # noqa: F401
-        except ImportError as err:
-            raise ImportError(
-                "Pandas is required to use CSVSource. Please install it with `pip install pandas`."
-            ) from err
         super().__init__(file, **kwargs)
 
     def extract(self) -> DataFrame:
@@ -42,8 +38,6 @@ class CSVSource(FileSource):
         Returns:
             DataFrame: The extracted data as a pandas DataFrame.
         """
-        import pandas as pd
-
         data: pd.DataFrame = pd.read_csv(self._file, **self._kwargs)
         return data
 
@@ -55,12 +49,6 @@ class XLSXSource(FileSource):
     """
 
     def __init__(self, file: str, **kwargs: Any) -> None:
-        try:
-            import pandas  # noqa: F401
-        except ImportError as err:
-            raise ImportError(
-                "Pandas is required to use XLSXSource. Please install it with `pip install pandas`."
-            ) from err
         super().__init__(file, **kwargs)
 
     def extract(self) -> DataFrame:
@@ -69,7 +57,5 @@ class XLSXSource(FileSource):
         Returns:
             DataFrame: The extracted data.
         """
-        import pandas as pd
-
         data: pd.DataFrame = pd.read_excel(self._file, **self._kwargs)
         return data

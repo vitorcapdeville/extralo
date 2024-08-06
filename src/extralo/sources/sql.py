@@ -1,11 +1,16 @@
 from typing import Any, Optional
 
+import pandas as pd
+
 from extralo.source import Source
 from extralo.typing import DataFrame
 
 
 class SQLSource(Source):
     """A class representing a SQL data source.
+
+    Requires sqlparse and sqlalchemy to be installed. The SQL query is executed using the provided database engine.
+    The query can have multiple statements, separated by semicolons. The last one must return some data.
 
     Args:
         engine (object): The database engine object.
@@ -15,16 +20,17 @@ class SQLSource(Source):
 
     def __init__(self, engine: Any, query: str, params: Optional[dict[str, Any]] = None) -> None:
         try:
-            import sqlalchemy  # noqa: F401
+            import sqlalchemy as sa  # noqa: F401
+            import sqlalchemy.exc as sa_exc  # noqa: F401
         except ImportError as err:
             raise ImportError(
                 "SQLAlchemy is required to use SQLSource. Please install it with `pip install sqlalchemy`."
             ) from err
         try:
-            import pandas  # noqa: F401
+            import sqlparse as sp  # noqa: F401
         except ImportError as err:
             raise ImportError(
-                "Pandas is required to use SQLSource. Please install it with `pip install pandas`."
+                "sqlparser is required to use SQLSource. Please install it with `pip install sqlparser`."
             ) from err
         self._engine = engine
         self._query = query
@@ -36,8 +42,17 @@ class SQLSource(Source):
         Returns:
             DataFrame: The extracted data as a pandas DataFrame.
         """
-        import pandas as pd
         import sqlalchemy as sa
+        import sqlalchemy.exc as sa_exc
+        import sqlparse as sp
 
-        with self._engine.connect() as connection:
-            return pd.read_sql(sa.text(self._query), connection, params=self._params)
+        query = sp.split(self._query)
+        with self._engine.begin() as connection:
+            for statement in query[:-1]:
+                connection.execute(statement, parameters=self._params, execution_options={"no_parameters": True})
+            try:
+                data = pd.read_sql(sa.text(query[-1]), connection, params=self._params)
+            except sa_exc.ProgrammingError:
+                data = pd.read_sql(sa.text(query[-1]), connection)
+
+        return data

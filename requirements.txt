@@ -7,4 +7,5 @@ pandas-stubs
 pytest
 python-semantic-release
 sqlalchemy
+sqlparse
 tox

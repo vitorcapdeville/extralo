@@ -2,8 +2,9 @@ import os.path
 from abc import ABC
 from typing import Any
 
+import pandas as pd
+
 from extralo.destination import Destination
-from extralo.typing import DataFrame
 
 
 class FileDestination(Destination, ABC):
@@ -25,8 +26,8 @@ class FileDestination(Destination, ABC):
 class CSVDestination(FileDestination):
     """A destination class for saving data to a CSV file."""
 
-    def load(self, data: DataFrame) -> None:
-        """Save the given DataFrame to a CSV file.
+    def load(self, data: pd.DataFrame) -> None:
+        """Save the given pandas DataFrame to a CSV file.
 
         If the file already exists, it will be overwritten.
 
@@ -39,8 +40,8 @@ class CSVDestination(FileDestination):
 class XLSXDestination(FileDestination):
     """A destination class for saving data to a XLSX file."""
 
-    def load(self, data: DataFrame) -> None:
-        """Save the given DataFrame to a XLSX file.
+    def load(self, data: pd.DataFrame) -> None:
+        """Save the given pandas DataFrame to a XLSX file.
 
         If the file already exists, it will be overwritten.
 
@@ -53,8 +54,8 @@ class XLSXDestination(FileDestination):
 class CSVAppendDestination(FileDestination):
     """A destination class for appending data to a CSV file."""
 
-    def load(self, data: DataFrame) -> None:
-        """Append the given DataFrame to a CSV file.
+    def load(self, data: pd.DataFrame) -> None:
+        """Append the given pandas DataFrame to a CSV file.
 
         If the file already exists, it will be appended, and will be assumed that the headers
         are in the same order.
