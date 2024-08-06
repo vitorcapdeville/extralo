@@ -6,7 +6,6 @@ from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
 from extralo.destination import Destination
 from extralo.source import Source
 from extralo.transformer import Transformer
-from extralo.transformers import NullTransformer
 from extralo.typing import DataFrame, DataFrameModel
 
 
@@ -70,7 +69,7 @@ class ETL:
         destinations (dict[str, list[Destination]]): A dictionary with the destinations to load data to.
             Each value must be a list of destinations, and the data with that key will be loaded to all the
             destionations provided in the list.
-        transformer (Transformer, optional): A transformer to transform the data. Defaults to NullTransformer().
+        transformer (Transformer, optional): A transformer to transform the data. No transformation is done by default.
         before_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
             validate the data before the transformation. Defaults to None.
         after_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
@@ -87,13 +86,17 @@ class ETL:
     ) -> None:
         self._sources = sources
         self._destinations = destinations
-        self._transformer = transformer or NullTransformer()
+        self._transformer = transformer
         self._before_schemas = before_schemas
         self._after_schemas = after_schemas
 
-        trasnform_args = inspect.getargs(self._transformer.transform.__code__).args
         if self._before_schemas is not None:
             _validate_steps(set(self._sources.keys()), "extract", set(self._before_schemas.keys()), "before_schema")
+
+        if self._transformer is None:
+            return
+
+        trasnform_args = inspect.getargs(self._transformer.transform.__code__).args
         _validate_steps(set(self._sources.keys()), "extract", set(trasnform_args[1:]), "transform")
 
         transform_output = get_type_hints(self._transformer.transform).get("return", None)
@@ -182,6 +185,10 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the transformed data. The keys could be different from the
                 input data.
         """
+        if self._transformer is None:
+            logging.getLogger("etl").info("Skipping transform step since no Transformer was specified.")
+            return data
+
         data = self._transformer.transform(**data)
         logging.getLogger("etl").info(f"Tranformed data with {self._transformer}")
         return data
