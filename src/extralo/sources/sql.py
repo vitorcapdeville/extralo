@@ -49,10 +49,15 @@ class SQLSource(Source):
         query = sp.split(self._query)
         with self._engine.begin() as connection:
             for statement in query[:-1]:
-                connection.execute(statement, parameters=self._params, execution_options={"no_parameters": True})
+                connection.execute(
+                    sa.text(statement), parameters=self._params, execution_options={"no_parameters": True}
+                )
             try:
                 data = pd.read_sql(sa.text(query[-1]), connection, params=self._params)
             except sa_exc.ProgrammingError:
                 data = pd.read_sql(sa.text(query[-1]), connection)
 
         return data
+
+    def __repr__(self) -> str:
+        return f"SQLSource(engine={self._engine})"
