@@ -37,6 +37,21 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
         raise IncompatibleStepsError(step1_name, step1_keys, step2_name, step2_keys)
 
 
+def _load(data: DataFrame, destination: Destination) -> None:
+    logger = logging.getLogger("etl")
+    logger.info(f"Starting load of {len(data)} records to {destination}")
+    destination.load(data)
+    logger.info(f"Loaded {len(data)} records to {destination}")
+
+
+def _extract(source: Source) -> DataFrame:
+    logger = logging.getLogger("etl")
+    logger.info(f"Starting extraction for {source}")
+    data = source.extract()
+    logger.info(f"Extracted {len(data)} records from {source}")
+    return data
+
+
 class ETL:
     """ETL - Extract, Load and Transform data from sources to destinations.
 
@@ -140,18 +155,15 @@ class ETL:
         """
         data = {}
         futures = {}
-        logger = logging.getLogger("etl")
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, source in self._sources.items():
-                logger.info(f"Starting extraction for {source}")
-                future: Future[DataFrame] = executor.submit(source.extract)
+                future: Future[DataFrame] = executor.submit(_extract, source)
                 futures[future] = (name, source)
 
             for future in as_completed(futures):
                 name, source = futures[future]
                 data[name] = future.result()
-                logger.info(f"Extracted {len(data[name])} records from {source}")
 
         return data
 
@@ -220,22 +232,10 @@ class ETL:
         Args:
             data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
         """
-        logger = logging.getLogger("etl")
-
         _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
-
-        futures = {}
 
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]
-                size = len(data_to_load)
                 for destination in destinations:
-                    logger.info(f"Starting load of {size} records to {destination}")
-                    future = executor.submit(destination.load, data_to_load)
-                    futures[future] = (size, destination)
-
-            for future in as_completed(futures):
-                size, dest = futures[future]
-                future.result()
-                logger.info(f"Loaded {size} records to {dest}")
+                    executor.submit(_load, data_to_load, destination)
