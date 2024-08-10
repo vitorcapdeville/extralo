@@ -146,10 +146,10 @@ class ETL:
             for name, source in self._sources.items():
                 logger.info(f"Starting extraction for {source}")
                 future: Future[DataFrame] = executor.submit(source.extract)
-                futures[future] = name
+                futures[future] = (name, source)
 
             for future in as_completed(futures):
-                name = futures[future]
+                name, source = futures[future]
                 data[name] = future.result()
                 logger.info(f"Extracted {len(data[name])} records from {source}")
 
