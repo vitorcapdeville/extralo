@@ -44,8 +44,16 @@ def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_sch
     if transform_method is None:
         return
 
-    trasnform_args = inspect.getargs(transform_method.__code__).args
-    _validate_steps(set(sources_keys), "extract", set(trasnform_args[1:]), "transform")
+    trasnform_args = inspect.getargs(transform_method.__code__)
+
+    if trasnform_args.varargs is not None:
+        raise ValueError("Transformer transform method should not accept *args.")
+
+    if trasnform_args.varkw is not None and len(trasnform_args.args) > 1:
+        raise ValueError("Transformer transform method should only accept **kwargs or usally defined arguments.")
+
+    if trasnform_args.varkw is None:
+        _validate_steps(set(sources_keys), "extract", set(trasnform_args.args[1:]), "transform")
 
     transform_return_type_hint = get_type_hints(transform_method).get("return", None)
     no_return_type_hint = transform_return_type_hint is None
