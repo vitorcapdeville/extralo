@@ -1,6 +1,6 @@
 import inspect
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
 
 from extralo.destination import Destination
@@ -236,8 +236,15 @@ class ETL:
         Args:
             data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
         """
+        futures = []
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]
                 for destination in destinations:
-                    executor.submit(_load, data_to_load, destination)
+                    futures.append(executor.submit(_load, data_to_load, destination))
+
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    raise Exception(f"Failed to load data: {e}") from e
