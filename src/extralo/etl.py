@@ -1,6 +1,6 @@
 import inspect
 import logging
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
 
 from extralo.destination import Destination
@@ -37,11 +37,30 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
         raise IncompatibleStepsError(step1_name, step1_keys, step2_name, step2_keys)
 
 
-def _load(data: DataFrame, destination: Destination) -> None:
-    logger = logging.getLogger("etl")
-    logger.info(f"Starting load of {len(data)} records to {destination}")
-    destination.load(data)
-    logger.info(f"Loaded {len(data)} records to {destination}")
+def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_schemas_keys, destinations_keys) -> None:
+    if before_schemas_keys is not None:
+        _validate_steps(sources_keys, "extract", before_schemas_keys, "before_schema")
+
+    if transform_method is None:
+        return
+
+    trasnform_args = inspect.getargs(transform_method.__code__).args
+    _validate_steps(set(sources_keys), "extract", set(trasnform_args[1:]), "transform")
+
+    transform_return_type_hint = get_type_hints(transform_method).get("return", None)
+    no_return_type_hint = transform_return_type_hint is None
+    return_type_hint_not_typed_dict = not isinstance(transform_return_type_hint, _TypedDictMeta)
+    if no_return_type_hint or return_type_hint_not_typed_dict:
+        logging.getLogger("etl").warning(
+            "Transformer output type hints are not a TypedDict, validation will be done only at runtime."
+        )
+        return
+
+    transform_output_dict = transform_return_type_hint.__annotations__
+    if after_schemas_keys is not None:
+        _validate_steps(set(transform_output_dict.keys()), "transform", after_schemas_keys, "after_schema")
+
+    _validate_steps(set(transform_output_dict.keys()), "transform", destinations_keys, "load")
 
 
 def _extract(source: Source) -> DataFrame:
@@ -50,6 +69,21 @@ def _extract(source: Source) -> DataFrame:
     data = source.extract()
     logger.info(f"Extracted {len(data)} records from {source}")
     return data
+
+
+def _validate(data: dict[str, DataFrame], schema: Optional[dict[str, DataFrameModel]]) -> dict[str, DataFrame]:
+    if schema is None:
+        logging.getLogger("etl").info("Skipping validation since no schema was provided.")
+        return data
+
+    return {name: schema.validate(data[name], lazy=True) for name, schema in schema.items()}
+
+
+def _load(data: DataFrame, destination: Destination) -> None:
+    logger = logging.getLogger("etl")
+    logger.info(f"Starting load of {len(data)} records to {destination}")
+    destination.load(data)
+    logger.info(f"Loaded {len(data)} records to {destination}")
 
 
 class ETL:
@@ -99,34 +133,19 @@ class ETL:
         before_schemas: Optional[dict[str, DataFrameModel]] = None,
         after_schemas: Optional[dict[str, DataFrameModel]] = None,
     ) -> None:
+        _validate_etl(
+            set(sources.keys()),
+            set(before_schemas.keys()) if before_schemas else None,
+            transformer.transform if transformer else None,
+            set(after_schemas.keys()) if after_schemas else None,
+            set(destinations.keys()),
+        )
+
         self._sources = sources
         self._destinations = destinations
         self._transformer = transformer
         self._before_schemas = before_schemas
         self._after_schemas = after_schemas
-
-        if self._before_schemas is not None:
-            _validate_steps(set(self._sources.keys()), "extract", set(self._before_schemas.keys()), "before_schema")
-
-        if self._transformer is None:
-            return
-
-        trasnform_args = inspect.getargs(self._transformer.transform.__code__).args
-        _validate_steps(set(self._sources.keys()), "extract", set(trasnform_args[1:]), "transform")
-
-        transform_output = get_type_hints(self._transformer.transform).get("return", None)
-        if transform_output is None or not isinstance(transform_output, _TypedDictMeta):
-            logging.getLogger("etl").warning(
-                "Transformer output type hints are not a TypedDict, validation will be done only at runtime."
-            )
-            return
-
-        transform_output_dict = transform_output.__annotations__
-        if self._after_schemas is not None:
-            _validate_steps(
-                set(transform_output_dict.keys()), "transform", set(self._after_schemas.keys()), "after_schema"
-            )
-        _validate_steps(set(transform_output_dict.keys()), "transform", set(self._destinations.keys()), "load")
 
     def execute(self) -> None:
         """Execute the ETL process.
@@ -141,7 +160,9 @@ class ETL:
         data = self.extract()
         data = self.before_validate(data)
         data = self.transform(data)
+        _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
         data = self.after_validate(data)
+        _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
         self.load(data)
 
     def extract(self) -> dict[str, DataFrame]:
@@ -153,19 +174,10 @@ class ETL:
         Returns:
             dict[str, DataFrame]: A dictionary with the data extracted from the sources.
         """
-        data = {}
-        futures = {}
-
         with ThreadPoolExecutor(max_workers=5) as executor:
-            for name, source in self._sources.items():
-                future: Future[DataFrame] = executor.submit(_extract, source)
-                futures[future] = (name, source)
-
-            for future in as_completed(futures):
-                name, source = futures[future]
-                data[name] = future.result()
-
-        return data
+            extracted_data = executor.map(_extract, self._sources.values())
+        names = self._sources.keys()
+        return dict(zip(names, extracted_data))
 
     def before_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """Validate the extracted data against the provided schemas.
@@ -179,10 +191,7 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
                 Uses the same keys as the input data.
         """
-        if self._before_schemas is None:
-            return data
-
-        return {name: schema.validate(data[name], lazy=True) for name, schema in self._before_schemas.items()}
+        return _validate(data, self._before_schemas)
 
     def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
@@ -217,12 +226,7 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
                 Uses the same keys as the input data.
         """
-        if self._after_schemas is None:
-            return data
-
-        _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
-
-        return {name: schema.validate(data[name], lazy=True) for name, schema in self._after_schemas.items()}
+        return _validate(data, self._after_schemas)
 
     def load(self, data: dict[str, DataFrame]) -> None:
         """Load the data to the provided destinations.
@@ -232,8 +236,6 @@ class ETL:
         Args:
             data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
         """
-        _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
-
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]

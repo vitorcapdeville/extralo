@@ -7,7 +7,6 @@ from .destinations import (
     XLSXDestination,
 )
 from .etl import ETL
-from .models import TolerableDataFrameModel
 from .sources import CSVSource, DeltaLakeSource, SQLSource, XLSXSource
 
 __all__ = [
@@ -17,7 +16,6 @@ __all__ = [
     "XLSXSource",
     "SQLDestination",
     "NullDestination",
-    "TolerableDataFrameModel",
     "CSVAppendDestination",
     "CSVDestination",
     "XLSXDestination",
