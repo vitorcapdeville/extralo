@@ -11,10 +11,10 @@ def test_delta_lake_destination_load(tmpdir):
     initial_data = pd.DataFrame({"col1": [1, 1, 2, 2, 3, 3], "col2": ["a", "b", "c", "d", "e", "f"]})
 
     file_path = os.path.join(tmpdir, "test.csv")
-    write_deltalake(file_path, initial_data, partition_by="col1")
+    write_deltalake(file_path, initial_data, partition_by=None)
 
     delta_lake_destination = DeltaLakeDestination(
-        table_uri=file_path, mode="overwrite", partition_by="col1", partition_filters=[("col1", "=", "1")]
+        table_uri=file_path, mode="overwrite", partition_by=None, predicate="col1 = 1"
     )
 
     data = pd.DataFrame({"col1": [1, 1, 1], "col2": ["aa", "bbb", "cccc"]})
