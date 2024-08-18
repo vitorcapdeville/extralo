@@ -37,3 +37,6 @@ class DeltaLakeSource(Source):
         import deltalake as dl
 
         return dl.DeltaTable(self._table_uri).to_pandas(partitions=self._partitions)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(table_uri={self._table_uri})"
