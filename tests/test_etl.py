@@ -59,15 +59,51 @@ def mock_after_schema(mock_data):
     return schema
 
 
-def test_etl_delegates_to_components(
-    mock_data, mock_source, mock_trans, mock_dest, mock_before_schema, mock_after_schema
-):
+def test_etl_delegates_to_components(mock_source, mock_trans, mock_dest, mock_before_schema, mock_after_schema):
     etl = ETL(
         sources={"source": mock_source},
         transformer=mock_trans,
         destinations={"source_trans": [mock_dest]},
         before_schemas={"source": mock_before_schema},
         after_schemas={"source_trans": mock_after_schema},
+    )
+
+    etl.execute()
+
+    assert True
+
+
+def test_etl_works_without_transformer(mock_source, mock_dest, mock_before_schema):
+    etl = ETL(
+        sources={"source": mock_source},
+        destinations={"source": [mock_dest]},
+        before_schemas={"source": mock_before_schema},
+    )
+
+    etl.execute()
+
+    assert True
+
+
+def test_etl_works_without_before_schema(mock_source, mock_trans, mock_dest, mock_before_schema, mock_after_schema):
+    etl = ETL(
+        sources={"source": mock_source},
+        transformer=mock_trans,
+        destinations={"source_trans": [mock_dest]},
+        after_schemas={"source_trans": mock_after_schema},
+    )
+
+    etl.execute()
+
+    assert True
+
+
+def test_etl_works_without_after_schema(mock_source, mock_trans, mock_dest, mock_before_schema, mock_after_schema):
+    etl = ETL(
+        sources={"source": mock_source},
+        transformer=mock_trans,
+        destinations={"source_trans": [mock_dest]},
+        before_schemas={"source": mock_before_schema},
     )
 
     etl.execute()

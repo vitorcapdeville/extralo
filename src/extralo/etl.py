@@ -168,7 +168,8 @@ class ETL:
         data = self.extract()
         data = self.before_validate(data)
         data = self.transform(data)
-        _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
+        if self._after_schemas is not None:
+            _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
         data = self.after_validate(data)
         _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
         self.load(data)
