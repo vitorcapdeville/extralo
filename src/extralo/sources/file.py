@@ -59,3 +59,18 @@ class XLSXSource(FileSource):
         """
         data: pd.DataFrame = pd.read_excel(self._file, **self._kwargs)
         return data
+
+
+class SASSource(FileSource):
+    """A class representing an SAS data source.
+
+    This class inherits from the FileSource class and provides a method to extract data from a XLSX file.
+    """
+
+    def extract(self) -> Any:
+        """Extracts data from an SAS file.
+
+        Returns:
+            DataFrame: The extracted data.
+        """
+        return pd.read_sas(self._file, **self._kwargs)

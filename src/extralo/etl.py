@@ -257,3 +257,20 @@ class ETL:
                     future.result()
                 except Exception as e:
                     raise Exception(f"Failed to load data: {e}") from e
+
+
+class ETLSequentialLoad(ETL):
+    """Same as ETL, but loads the data sequentially instead of in parallel."""
+
+    def load(self, data: dict[str, DataFrame]) -> None:
+        """Load the data to the provided destinations.
+
+        The data will be loaded sequentially.
+
+        Args:
+            data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
+        """
+        for name, destinations in self._destinations.items():
+            data_to_load = data[name]
+            for destination in destinations:
+                _load(data_to_load, destination)

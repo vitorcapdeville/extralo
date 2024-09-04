@@ -51,6 +51,30 @@ class XLSXDestination(FileDestination):
         data.to_excel(self._file, **self._kwargs)
 
 
+class XLSXAppendDestination(FileDestination):
+    """A destination class for appending data to a XLSX file.
+
+    This class cannot be used with the parallel ETL.
+    """
+
+    def __init__(self, file: str, mode: str, if_sheet_exists: str = None, **kwargs: Any) -> None:
+        super().__init__(file, **kwargs)
+        self._mode = mode
+        self._if_sheet_exists = if_sheet_exists
+
+    def load(self, data: pd.DataFrame) -> None:
+        """Append the given pandas DataFrame to a XLSX file.
+
+        Args:
+            data (DataFrame): The DataFrame to be saved.
+        """
+        with pd.ExcelWriter(self._file, mode=self._mode, if_sheet_exists=self._if_sheet_exists) as writer:
+            data.to_excel(writer, **self._kwargs)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(file={self._file}, mode={self._mode})"
+
+
 class CSVAppendDestination(FileDestination):
     """A destination class for appending data to a CSV file."""
 

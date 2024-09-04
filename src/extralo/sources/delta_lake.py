@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ class DeltaLakeSource(Source):
         self,
         table_uri: str,
         partitions: Optional[list[tuple[str]]] = None,
+        **kwargs: Any,
     ) -> None:
         try:
             import deltalake  # noqa: F401
@@ -27,6 +28,7 @@ class DeltaLakeSource(Source):
             ) from err
         self._table_uri = table_uri
         self._partitions = partitions
+        self._kwargs = kwargs
 
     def extract(self) -> pd.DataFrame:
         """Extracts data from a Delta Lake table and returns it as a pandas DataFrame.
@@ -36,7 +38,7 @@ class DeltaLakeSource(Source):
         """
         import deltalake as dl
 
-        return dl.DeltaTable(self._table_uri).to_pandas(partitions=self._partitions)
+        return dl.DeltaTable(self._table_uri).to_pandas(partitions=self._partitions, **self._kwargs)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table_uri={self._table_uri})"
