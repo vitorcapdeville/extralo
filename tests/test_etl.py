@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, Mock
 import pandas as pd
 import pandera as pa
 import pytest
+
 from extralo.etl import ETL, IncompatibleStepsError
 
 

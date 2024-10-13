@@ -1,8 +1,9 @@
 import logging
 
-from extralo import ETL, CSVSource, SQLDestination
 from sqlalchemy import create_engine
 from transformer import MyTransformer
+
+from extralo import ETL, CSVSource, SQLDestination
 
 logging.basicConfig(level=logging.INFO)
 

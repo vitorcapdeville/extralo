@@ -1,8 +1,9 @@
 import os
 
 import pandas as pd
-from extralo.destinations import CSVAppendDestination, CSVDestination, XLSXDestination
 from pandas.testing import assert_frame_equal
+
+from extralo.destinations import CSVAppendDestination, CSVDestination, XLSXDestination
 
 
 def test_csv_append_destination_load(tmpdir):

@@ -1,7 +1,8 @@
 import inspect
-import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
+
+from loguru import logger
 
 from extralo.destination import Destination
 from extralo.source import Source
@@ -27,7 +28,8 @@ class IncompatibleStepsError(Exception):
 
     def __str__(self) -> str:
         return (
-            f"Step '{self.step}' with keys {self.keys} is incompatible with step '{self.step_base}' "
+            f"Step '{self.step}' with keys {
+                self.keys} is incompatible with step '{self.step_base}' "
             f"with keys {self.keys_base}"
         )
 
@@ -59,9 +61,7 @@ def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_sch
     no_return_type_hint = transform_return_type_hint is None
     return_type_hint_not_typed_dict = not isinstance(transform_return_type_hint, _TypedDictMeta)
     if no_return_type_hint or return_type_hint_not_typed_dict:
-        logging.getLogger("etl").warning(
-            "Transformer output type hints are not a TypedDict, validation will be done only at runtime."
-        )
+        logger.warning("Transformer output type hints are not a TypedDict, validation will be done only at runtime.")
         return
 
     transform_output_dict = transform_return_type_hint.__annotations__
@@ -72,7 +72,6 @@ def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_sch
 
 
 def _extract(source: Source) -> DataFrame:
-    logger = logging.getLogger("etl")
     logger.info(f"Starting extraction for {source}")
     data = source.extract()
     logger.info(f"Extracted {len(data)} records from {source}")
@@ -81,14 +80,13 @@ def _extract(source: Source) -> DataFrame:
 
 def _validate(data: dict[str, DataFrame], schema: Optional[dict[str, DataFrameModel]]) -> dict[str, DataFrame]:
     if schema is None:
-        logging.getLogger("etl").info("Skipping validation since no schema was provided.")
+        logger.info("Skipping validation since no schema was provided.")
         return data
 
     return {name: schema.validate(data[name], lazy=True) for name, schema in schema.items()}
 
 
 def _load(data: DataFrame, destination: Destination) -> None:
-    logger = logging.getLogger("etl")
     logger.info(f"Starting load of {len(data)} records to {destination}")
     destination.load(data)
     logger.info(f"Loaded {len(data)} records to {destination}")
@@ -216,11 +214,11 @@ class ETL:
                 input data.
         """
         if self._transformer is None:
-            logging.getLogger("etl").info("Skipping transform step since no Transformer was specified.")
+            logger.info("Skipping transform step since no Transformer was specified.")
             return data
 
         data = self._transformer.transform(**data)
-        logging.getLogger("etl").info(f"Tranformed data with {self._transformer}")
+        logger.info(f"Tranformed data with {self._transformer}")
         return data
 
     def after_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:

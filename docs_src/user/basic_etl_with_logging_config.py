@@ -1,9 +1,10 @@
 import json
 import logging.config
 
-from extralo import ETL, CSVSource, SQLDestination
 from sqlalchemy import create_engine
 from transformer import MyTransformer
+
+from extralo import ETL, CSVSource, SQLDestination
 
 with open("logging.json") as f_in:
     config = json.load(f_in)

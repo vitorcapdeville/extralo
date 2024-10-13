@@ -2,8 +2,9 @@ import os
 
 import pandas as pd
 from deltalake import DeltaTable, write_deltalake
-from extralo.destinations.delta_lake import DeltaLakeDestination
 from pandas.testing import assert_frame_equal
+
+from extralo.destinations.delta_lake import DeltaLakeDestination
 
 
 def test_delta_lake_destination_load(tmpdir):
