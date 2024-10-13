@@ -1,4 +1,5 @@
 import inspect
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, _TypedDictMeta, get_type_hints  # type: ignore
 
@@ -61,7 +62,9 @@ def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_sch
     no_return_type_hint = transform_return_type_hint is None
     return_type_hint_not_typed_dict = not isinstance(transform_return_type_hint, _TypedDictMeta)
     if no_return_type_hint or return_type_hint_not_typed_dict:
-        logger.warning("Transformer output type hints are not a TypedDict, validation will be done only at runtime.")
+        warnings.warn(
+            "Transformer output type hints are not a TypedDict, validation will be done only at runtime.", stacklevel=1
+        )
         return
 
     transform_output_dict = transform_return_type_hint.__annotations__
@@ -71,14 +74,14 @@ def _validate_etl(sources_keys, before_schemas_keys, transform_method, after_sch
     _validate_steps(set(transform_output_dict.keys()), "transform", destinations_keys, "load")
 
 
-def _extract(source: Source) -> DataFrame:
+def _extract(source: Source, logger) -> DataFrame:
     logger.info(f"Starting extraction for {source}")
     data = source.extract()
     logger.info(f"Extracted {len(data)} records from {source}")
     return data
 
 
-def _validate(data: dict[str, DataFrame], schema: Optional[dict[str, DataFrameModel]]) -> dict[str, DataFrame]:
+def _validate(data: dict[str, DataFrame], schema: Optional[dict[str, DataFrameModel]], logger) -> dict[str, DataFrame]:
     if schema is None:
         logger.info("Skipping validation since no schema was provided.")
         return data
@@ -86,7 +89,7 @@ def _validate(data: dict[str, DataFrame], schema: Optional[dict[str, DataFrameMo
     return {name: schema.validate(data[name], lazy=True) for name, schema in schema.items()}
 
 
-def _load(data: DataFrame, destination: Destination) -> None:
+def _load(data: DataFrame, destination: Destination, logger) -> None:
     logger.info(f"Starting load of {len(data)} records to {destination}")
     destination.load(data)
     logger.info(f"Loaded {len(data)} records to {destination}")
@@ -138,20 +141,29 @@ class ETL:
         transformer: Optional[Transformer] = None,
         before_schemas: Optional[dict[str, DataFrameModel]] = None,
         after_schemas: Optional[dict[str, DataFrameModel]] = None,
+        name: Optional[str] = None,
     ) -> None:
-        _validate_etl(
-            set(sources.keys()),
-            set(before_schemas.keys()) if before_schemas else None,
-            transformer.transform if transformer else None,
-            set(after_schemas.keys()) if after_schemas else None,
-            set(destinations.keys()),
-        )
+        self._logger = logger.bind(etl_name=name, status="pending")
+
+        with warnings.catch_warnings(record=True) as warns:
+            warnings.simplefilter("always")
+
+            _validate_etl(
+                set(sources.keys()),
+                set(before_schemas.keys()) if before_schemas else None,
+                transformer.transform if transformer else None,
+                set(after_schemas.keys()) if after_schemas else None,
+                set(destinations.keys()),
+            )
+        for warn in warns:
+            self._logger.warning(warn.message)
 
         self._sources = sources
         self._destinations = destinations
         self._transformer = transformer
         self._before_schemas = before_schemas
         self._after_schemas = after_schemas
+        self._name = name
 
     def execute(self) -> None:
         """Execute the ETL process.
@@ -163,14 +175,26 @@ class ETL:
             This method does not return anything, and it's used for it's only side effect: load the data to the
                 destinations.
         """
-        data = self.extract()
-        data = self.before_validate(data)
-        data = self.transform(data)
-        if self._after_schemas is not None:
-            _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
-        data = self.after_validate(data)
-        _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
-        self.load(data)
+        self._logger.info(f"Starting ETL process for {self._name}.", status="running")
+        self._logger = self._logger.patch(lambda record: record["extra"].update(status="running"))
+        try:
+            data = self.extract()
+            data = self.before_validate(data)
+            data = self.transform(data)
+            if self._after_schemas is not None:
+                _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
+            data = self.after_validate(data)
+            _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
+            self.load(data)
+        except Exception as e:
+            self._logger.patch(lambda record: record["extra"].update(status="failed")).error(
+                f"Failed to execute ETL process for {self._name}: {e}"
+            )
+            raise e
+        else:
+            self._logger.patch(lambda record: record["extra"].update(status="success")).info(
+                f"ETL process for {self._name} executed successfully."
+            )
 
     def extract(self) -> dict[str, DataFrame]:
         """Extract the data from the provided sources and load it into a dictionary with same keys as the sources.
@@ -182,7 +206,7 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the data extracted from the sources.
         """
         with ThreadPoolExecutor(max_workers=5) as executor:
-            extracted_data = executor.map(_extract, self._sources.values())
+            extracted_data = executor.map(lambda *args: _extract(*args, logger=self._logger), self._sources.values())
         names = self._sources.keys()
         return dict(zip(names, extracted_data))
 
@@ -198,7 +222,7 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
                 Uses the same keys as the input data.
         """
-        return _validate(data, self._before_schemas)
+        return _validate(data, self._before_schemas, self._logger)
 
     def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
@@ -214,11 +238,11 @@ class ETL:
                 input data.
         """
         if self._transformer is None:
-            logger.info("Skipping transform step since no Transformer was specified.")
+            self._logger.info("Skipping transform step since no Transformer was specified.")
             return data
 
         data = self._transformer.transform(**data)
-        logger.info(f"Tranformed data with {self._transformer}")
+        self._logger.info(f"Tranformed data with {self._transformer}")
         return data
 
     def after_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
@@ -233,7 +257,7 @@ class ETL:
             dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
                 Uses the same keys as the input data.
         """
-        return _validate(data, self._after_schemas)
+        return _validate(data, self._after_schemas, self._logger)
 
     def load(self, data: dict[str, DataFrame]) -> None:
         """Load the data to the provided destinations.
@@ -248,7 +272,9 @@ class ETL:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]
                 for destination in destinations:
-                    futures.append(executor.submit(_load, data_to_load, destination))
+                    futures.append(
+                        executor.submit(lambda *args: _load(*args, logger=self._logger), data_to_load, destination)
+                    )
 
             for future in as_completed(futures):
                 try:
@@ -271,4 +297,4 @@ class ETLSequentialLoad(ETL):
         for name, destinations in self._destinations.items():
             data_to_load = data[name]
             for destination in destinations:
-                _load(data_to_load, destination)
+                _load(data_to_load, destination, self._logger)
