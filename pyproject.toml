@@ -10,7 +10,7 @@ authors = [{ name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" }]
 maintainers = [
     { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
 ]
-dependencies = ["pandas"]
+dependencies = ["pandas", "loguru"]
 
 [project.optional-dependencies]
 sql = ["sqlalchemy"]
