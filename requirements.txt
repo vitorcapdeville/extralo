@@ -1,11 +1,15 @@
+loguru
 mkdocs
 mkdocs-material
 mkdocstrings-python
 openpyxl
 pandas
 pandas-stubs
+pandera
+pre-commit
 pytest
 python-semantic-release
+ruff
 sqlalchemy
 sqlparse
 tox

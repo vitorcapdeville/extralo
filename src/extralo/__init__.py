@@ -1,3 +1,5 @@
+from loguru import logger
+
 from .destinations import (
     CSVAppendDestination,
     CSVDestination,
@@ -9,6 +11,8 @@ from .destinations import (
 )
 from .etl import ETL, ETLSequentialLoad
 from .sources import CSVSource, DeltaLakeSource, SASSource, SQLSource, XLSXSource
+
+logger.disable("extralo")
 
 __all__ = [
     "ETL",

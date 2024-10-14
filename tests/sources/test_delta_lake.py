@@ -2,8 +2,9 @@ import os
 
 import pandas as pd
 from deltalake import write_deltalake
-from extralo.sources.delta_lake import DeltaLakeSource
 from pandas.testing import assert_frame_equal
+
+from extralo.sources.delta_lake import DeltaLakeSource
 
 
 def test_delta_lake_source_extract(tmpdir):

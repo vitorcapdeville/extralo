@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 import sqlalchemy as sa
-from extralo.destinations.sql import SQLAppendDestination, SQLDestination
 from pandas.testing import assert_frame_equal
+
+from extralo.destinations.sql import SQLAppendDestination, SQLDestination
 
 
 def test_sql_destination_load():
