@@ -1,11 +1,10 @@
-import logging
-
+from loguru import logger
 from sqlalchemy import create_engine
 from transformer import MyTransformer
 
 from extralo import ETL, CSVSource, SQLDestination
 
-logging.basicConfig(level=logging.INFO)
+logger.enable("extralo")
 
 engine = create_engine("sqlite:///data.sqlite")
 
@@ -19,6 +18,7 @@ etl = ETL(
             SQLDestination(engine=engine, table="data_group", schema=None, if_exists="replace"),
         ],
     },
+    name="basic_etl_with_logging",
 )
 
 etl.execute()
