@@ -192,7 +192,7 @@ class ETL:
             )
             raise e
         else:
-            self._logger.patch(lambda record: record["extra"].update(status="success")).info(
+            self._logger.patch(lambda record: record["extra"].update(status="success")).success(
                 f"ETL process for {self._name} executed successfully."
             )
 
