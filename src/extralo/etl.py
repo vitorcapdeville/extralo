@@ -29,8 +29,7 @@ class IncompatibleStepsError(Exception):
 
     def __str__(self) -> str:
         return (
-            f"Step '{self.step}' with keys {
-                self.keys} is incompatible with step '{self.step_base}' "
+            f"Step '{self.step}' with keys {self.keys} is incompatible with step '{self.step_base}' "
             f"with keys {self.keys_base}"
         )
 

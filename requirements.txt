@@ -5,6 +5,7 @@ mkdocstrings-python
 openpyxl
 pandas
 pandas-stubs
+pandera
 pre-commit
 pytest
 python-semantic-release
