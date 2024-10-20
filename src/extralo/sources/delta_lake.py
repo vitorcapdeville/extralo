@@ -42,3 +42,24 @@ class DeltaLakeSource(Source):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table_uri={self._table_uri})"
+
+
+class SparkDeltaLakeSource(Source):
+    """A source class for extracting data from a Delta Lake using Spark.
+
+    Args:
+        spark (SparkSession): The Spark session to use for executing the query.
+        query (str): The SQL query to execute on the Delta Lake.
+    """
+
+    def __init__(self, spark, query):
+        self._spark = spark
+        self._query = query
+
+    def extract(self):
+        """Executes the SQL query on the Delta Lake and returns the result as a pandas DataFrame.
+
+        Returns:
+            DataFrame: The result of the SQL query as a Pandas DataFrame.
+        """
+        return self._spark.sql(self._query).toPandas()
