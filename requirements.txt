@@ -1,3 +1,6 @@
+-e .
+delta-spark
+deltalake
 loguru
 mkdocs
 mkdocs-material
@@ -7,6 +10,7 @@ pandas
 pandas-stubs
 pandera
 pre-commit
+pyspark
 pytest
 python-semantic-release
 ruff

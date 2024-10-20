@@ -4,13 +4,14 @@ from .destinations import (
     CSVAppendDestination,
     CSVDestination,
     DeltaLakeDestination,
+    SparkDeltaLakeDestination,
     SQLAppendDestination,
     SQLDestination,
     XLSXAppendDestination,
     XLSXDestination,
 )
 from .etl import ETL, ETLSequentialLoad
-from .sources import CSVSource, DeltaLakeSource, SASSource, SQLSource, XLSXSource
+from .sources import CSVSource, DeltaLakeSource, SASSource, SparkDeltaLakeSource, SQLSource, XLSXSource
 
 logger.disable("extralo")
 
@@ -29,5 +30,7 @@ __all__ = [
     "XLSXDestination",
     "SQLAppendDestination",
     "DeltaLakeDestination",
+    "SparkDeltaLakeDestination",
     "DeltaLakeSource",
+    "SparkDeltaLakeSource",
 ]

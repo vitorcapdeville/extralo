@@ -25,6 +25,16 @@
 				}
 			}
 		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "17",
+			"jdkDistro": "ms",
+			"gradleVersion": "latest",
+			"mavenVersion": "latest",
+			"antVersion": "latest",
+			"groovyVersion": "latest"
+		}
 	}
 
 	// Configure tool-specific properties.

@@ -44,3 +44,48 @@ class DeltaLakeDestination(Destination):
         dl.write_deltalake(
             table_or_uri=self._table_uri, data=data, mode=self._mode, partition_by=self._partition_by, **self._kwargs
         )
+
+
+class SparkDeltaLakeDestination(Destination):
+    """A class to handle data loading into a Delta Lake table using Apache Spark.
+
+    Args:
+        spark (SparkSession): The Spark session to use for data operations.
+        table (str): The name of the Delta Lake table.
+        mode (Literal["error", "append", "overwrite", "ignore"]): The mode for writing data.
+        partition_by (Optional[Union[list[str], str]]): Columns to partition the data by.
+        replace_where (Optional[str]): SQL condition to replace data that matches the condition.
+        **kwargs: Additional keyword arguments to be passed to the save function.
+    """
+
+    def __init__(
+        self,
+        spark,
+        table: str,
+        mode: Literal["error", "append", "overwrite", "ignore"],
+        partition_by: Optional[Union[list[str], str]] = None,
+        replace_where: Optional[str] = None,
+        **kwargs: Any,
+    ):
+        self._spark = spark
+        self._table = table
+        self._mode = mode
+        self._partition_by = partition_by
+        self._replace_where = replace_where or "true"
+        self._kwargs = kwargs
+
+    def load(self, data: DataFrame):
+        """Loads the provided data into the Delta Lake table.
+
+        Args:
+            data (DataFrame): The data to be loaded into the Delta Lake table.
+        """
+        df = self._spark.createDataFrame(data)
+        df.write.saveAsTable(
+            self._table,
+            replaceWhere=self._replace_where,
+            mode=self._mode,
+            partitionBy=self._partition_by,
+            format="delta",
+            **self._kwargs,
+        )
