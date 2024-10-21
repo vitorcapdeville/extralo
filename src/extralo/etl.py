@@ -179,7 +179,13 @@ class ETL:
         try:
             data = self.extract()
             data = self.before_validate(data)
-            data = self.transform(data)
+
+            with warnings.catch_warnings(record=True) as warns:
+                warnings.simplefilter("always")
+                data = self.transform(data)
+            for warn in warns:
+                self._logger.warning(warn.message)
+
             if self._after_schemas is not None:
                 _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
             data = self.after_validate(data)
@@ -187,7 +193,7 @@ class ETL:
             self.load(data)
         except Exception as e:
             self._logger.patch(lambda record: record["extra"].update(status="failed")).error(
-                f"Failed to execute ETL process for {self._name}: {e}"
+                f"Failed to execute ETL process for {self._name}: \n {e}"
             )
             raise e
         else:
