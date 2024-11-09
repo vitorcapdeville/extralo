@@ -30,7 +30,7 @@ __all__ = [
     "XLSXDestination",
     "SQLAppendDestination",
     "DeltaLakeDestination",
-    "SparkDeltaLakeDestination",
     "DeltaLakeSource",
+    "SparkDeltaLakeDestination",
     "SparkDeltaLakeSource",
 ]
