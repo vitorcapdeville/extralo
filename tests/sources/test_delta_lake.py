@@ -35,4 +35,7 @@ def test_spark_delta_lake_source_extract(spark):
 
     expected_data = pd.DataFrame({"col1": [2, 2], "col2": ["c", "d"]})
 
-    assert_frame_equal(obtained_data.sort_values("col2"), expected_data.sort_values("col2"))
+    assert_frame_equal(
+        obtained_data.sort_values("col2").reset_index(drop=True),
+        expected_data.sort_values("col2").reset_index(drop=True),
+    )

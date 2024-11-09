@@ -89,3 +89,6 @@ class SparkDeltaLakeDestination(Destination):
             format="delta",
             **self._kwargs,
         )
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(table={self._table}, mode={self._mode})"

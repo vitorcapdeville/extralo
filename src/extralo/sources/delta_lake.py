@@ -63,3 +63,6 @@ class SparkDeltaLakeSource(Source):
             DataFrame: The result of the SQL query as a Pandas DataFrame.
         """
         return self._spark.sql(self._query).toPandas()
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(query={self._query})"
