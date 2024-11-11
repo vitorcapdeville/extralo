@@ -65,6 +65,7 @@ class SparkDeltaLakeDestination(Destination):
         mode: Literal["error", "append", "overwrite", "ignore"],
         partition_by: Optional[Union[list[str], str]] = None,
         replace_where: Optional[str] = None,
+        schema = None,
         **kwargs: Any,
     ):
         self._spark = spark
@@ -73,6 +74,7 @@ class SparkDeltaLakeDestination(Destination):
         self._partition_by = partition_by
         self._replace_where = replace_where or "true"
         self._kwargs = kwargs
+        self._schema = schema
 
     def load(self, data: DataFrame):
         """Loads the provided data into the Delta Lake table.
@@ -80,7 +82,7 @@ class SparkDeltaLakeDestination(Destination):
         Args:
             data (DataFrame): The data to be loaded into the Delta Lake table.
         """
-        df = self._spark.createDataFrame(data)
+        df = self._spark.createDataFrame(data, schema=self._schema)
         df.write.saveAsTable(
             self._table,
             replaceWhere=self._replace_where,
