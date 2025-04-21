@@ -1,3 +1,4 @@
+# type: ignore
 from typing import Any, Literal, Optional, Union
 
 from extralo.destination import Destination
@@ -20,7 +21,7 @@ class DeltaLakeDestination(Destination):
         **kwargs: Any,
     ) -> None:
         try:
-            import deltalake  # noqa: F401
+            import deltalake  # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "DeltaLake is required to use DeltaLakeDestination. Please install it with `pip install deltalake`."
@@ -39,7 +40,7 @@ class DeltaLakeDestination(Destination):
         Args:
             data (DataFrame): The DataFrame to be loaded.
         """
-        import deltalake as dl
+        import deltalake as dl  # noqa: PLC0415
 
         dl.write_deltalake(
             table_or_uri=self._table_uri, data=data, mode=self._mode, partition_by=self._partition_by, **self._kwargs
@@ -58,14 +59,14 @@ class SparkDeltaLakeDestination(Destination):
         **kwargs: Additional keyword arguments to be passed to the save function.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         spark,
         table: str,
         mode: Literal["error", "append", "overwrite", "ignore"],
         partition_by: Optional[Union[list[str], str]] = None,
         replace_where: Optional[str] = None,
-        schema = None,
+        schema=None,
         **kwargs: Any,
     ):
         self._spark = spark

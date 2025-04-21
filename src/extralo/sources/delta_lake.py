@@ -1,3 +1,4 @@
+# type: ignore
 from typing import Any, Optional
 
 import pandas as pd
@@ -21,7 +22,7 @@ class DeltaLakeSource(Source):
         **kwargs: Any,
     ) -> None:
         try:
-            import deltalake  # noqa: F401
+            import deltalake  # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "DeltaLake is required to use DeltaLakeSource. Please install it with `pip install deltalake`."
@@ -36,7 +37,7 @@ class DeltaLakeSource(Source):
         Returns:
             DataFrame: The extracted data as a pandas DataFrame.
         """
-        import deltalake as dl
+        import deltalake as dl  # noqa: PLC0415
 
         return dl.DeltaTable(self._table_uri).to_pandas(partitions=self._partitions, **self._kwargs)
 
