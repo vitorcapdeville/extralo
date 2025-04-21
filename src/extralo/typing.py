@@ -4,7 +4,7 @@ DataFrame = Any
 
 
 class DataFrameModel(Protocol):  # noqa: D101
-    def validate(  # noqa: D102
+    def validate(  # noqa: D102, PLR0913, PLR0917
         self,
         check_obj: DataFrame,
         head: Optional[int] = None,
