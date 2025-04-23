@@ -12,8 +12,7 @@ from loguru import logger
 
 from extralo.destination import Destination
 from extralo.source import Source
-from extralo.transformer import Transformer
-from extralo.typing import DataFrame, DataFrameModel
+from extralo.typing import DataFrame
 
 
 class IncompatibleStepsError(Exception):
@@ -46,14 +45,9 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
 
 def _validate_etl(
     sources_keys: set[str],
-    before_schemas_keys: set[str] | None,
     transform_method: Callable[..., dict[str, DataFrame]] | None,
-    after_schemas_keys: set[str] | None,
     destinations_keys: set[str],
 ) -> None:
-    if before_schemas_keys is not None:
-        _validate_steps(sources_keys, "extract", before_schemas_keys, "before_schema")
-
     if transform_method is None:
         return
 
@@ -78,9 +72,6 @@ def _validate_etl(
         )
         return
 
-    if after_schemas_keys is not None:
-        _validate_steps(set(transform_output_dict.keys()), "transform", after_schemas_keys, "after_schema")
-
     _validate_steps(set(transform_output_dict.keys()), "transform", destinations_keys, "load")
 
 
@@ -89,16 +80,6 @@ def _extract(source: Source, logger: loguru.Logger) -> DataFrame:
     data = source.extract()
     logger.info(f"Extracted {len(data)} records from {source}")
     return data
-
-
-def _validate(
-    data: dict[str, DataFrame], schema: dict[str, DataFrameModel] | None, logger: loguru.Logger
-) -> dict[str, DataFrame]:
-    if schema is None:
-        logger.info("Skipping validation since no schema was provided.")
-        return data
-
-    return {name: schema.validate(data[name], lazy=True) for name, schema in schema.items()}
 
 
 def _load(data: DataFrame, destination: Destination, logger: loguru.Logger) -> None:
@@ -113,8 +94,7 @@ class ETL:
     The ETL class provide functionality around the extract, load and transform operations.
     The main functionalities are:
 
-    - Ensure that the process will be executed in the correct order, and the data will only be loaded if satisfies the
-        provided schema.
+    - Ensure that the process will be executed in the correct order, without the possibility of manual interference.
     - Allow the use of multiple sources.
     - Allow the use of multiple destinations for a single data.
     - Allow the use of different destinations for different data.
@@ -134,25 +114,22 @@ class ETL:
     This can be resolved using return type annotations and the `TypedDict` from `typing` module. If the transformer
     return a `TypedDict`, the keys will be validated at initialization.
 
+    It's strongly recommended to use Pandera decorators to validate the data in the transform callable.
+
     Args:
         sources (dict[str, Source]): A dictionary with the sources to extract data from.
         destinations (dict[str, list[Destination]]): A dictionary with the destinations to load data to.
             Each value must be a list of destinations, and the data with that key will be loaded to all the
             destionations provided in the list.
-        transformer (Transformer, optional): A transformer to transform the data. No transformation is done by default.
-        before_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
-            validate the data before the transformation. Defaults to None.
-        after_schemas (Optional[dict[str, type[pa.DataFrameModel]]], optional): A dictionary with the schemas to
-            validate the data after the transformation. Defaults to None.
+        transformer (Callable[..., dict[str, DataFrame]], optional): A transformer to transform the data.
+            No transformation is done by default.
     """
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         sources: dict[str, Source],
         destinations: dict[str, list[Destination]],
-        transformer: Transformer | None = None,
-        before_schemas: dict[str, DataFrameModel] | None = None,
-        after_schemas: dict[str, DataFrameModel] | None = None,
+        transformer: Callable[..., dict[str, DataFrame]] | None = None,
         name: str | None = None,
     ) -> None:
         self._logger = logger.bind(etl_name=name, status="pending")
@@ -162,9 +139,7 @@ class ETL:
 
             _validate_etl(
                 set(sources.keys()),
-                set(before_schemas.keys()) if before_schemas else None,
-                transformer.transform if transformer else None,
-                set(after_schemas.keys()) if after_schemas else None,
+                transformer if transformer else None,
                 set(destinations.keys()),
             )
         for warn in warns:
@@ -173,8 +148,6 @@ class ETL:
         self._sources = sources
         self._destinations = destinations
         self._transformer = transformer
-        self._before_schemas = before_schemas
-        self._after_schemas = after_schemas
         self._name = name
 
     def execute(self) -> None:
@@ -187,7 +160,6 @@ class ETL:
         self._logger = self._logger.patch(lambda record: record["extra"].update(status="running"))
         try:
             data = self.extract()
-            data = self.before_validate(data)
 
             with warnings.catch_warnings(record=True) as warns:
                 warnings.simplefilter("always")
@@ -195,9 +167,6 @@ class ETL:
             for warn in warns:
                 self._logger.warning(warn.message)
 
-            if self._after_schemas is not None:
-                _validate_steps(set(data.keys()), "transform", set(self._after_schemas.keys()), "after_schema")
-            data = self.after_validate(data)
             _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
             self.load(data)
         except Exception as e:
@@ -222,21 +191,7 @@ class ETL:
         with ThreadPoolExecutor(max_workers=5) as executor:
             extracted_data = executor.map(lambda *args: _extract(*args, logger=self._logger), self._sources.values())
         names = self._sources.keys()
-        return dict(zip(names, extracted_data))
-
-    def before_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
-        """Validate the extracted data against the provided schemas.
-
-        If the before_schemas was not provided, no validation will be done and the data will be returned as is.
-
-        Args:
-            data (dict[str, DataFrame]): The data to be validated.
-
-        Returns:
-            dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
-                Uses the same keys as the input data.
-        """
-        return _validate(data, self._before_schemas, self._logger)
+        return dict(zip(names, extracted_data, strict=True))
 
     def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
@@ -255,23 +210,9 @@ class ETL:
             self._logger.info("Skipping transform step since no Transformer was specified.")
             return data
 
-        data = self._transformer.transform(**data)
+        data = self._transformer(**data)
         self._logger.info(f"Tranformed data with {self._transformer}")
         return data
-
-    def after_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
-        """Validate the transformed data against the provided schemas.
-
-        If the after_schemas was not provided, no validation will be done and the data will be returned as is.
-
-        Args:
-            data (dict[str, DataFrame]): The data to be validated.
-
-        Returns:
-            dict[str, DataFrame]: A dictionary with the validated data (or the original data if no schema was provided).
-                Uses the same keys as the input data.
-        """
-        return _validate(data, self._after_schemas, self._logger)
 
     def load(self, data: dict[str, DataFrame]) -> None:
         """Load the data to the provided destinations.
