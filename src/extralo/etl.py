@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
-from typing import _TypedDictMeta, get_type_hints  # type: ignore  # noqa: PLC2701
+from typing import get_type_hints
 
 import loguru
 from loguru import logger
@@ -69,15 +69,15 @@ def _validate_etl(
         _validate_steps(set(sources_keys), "extract", set(trasnform_args.args[1:]), "transform")
 
     transform_return_type_hint = get_type_hints(transform_method).get("return", None)
-    no_return_type_hint = transform_return_type_hint is None
-    return_type_hint_not_typed_dict = not isinstance(transform_return_type_hint, _TypedDictMeta)
-    if no_return_type_hint or return_type_hint_not_typed_dict:
+
+    try:
+        transform_output_dict = get_type_hints(transform_return_type_hint)
+    except TypeError:
         warnings.warn(
             "Transformer output type hints are not a TypedDict, validation will be done only at runtime.", stacklevel=1
         )
         return
 
-    transform_output_dict = transform_return_type_hint.__annotations__
     if after_schemas_keys is not None:
         _validate_steps(set(transform_output_dict.keys()), "transform", after_schemas_keys, "after_schema")
 
