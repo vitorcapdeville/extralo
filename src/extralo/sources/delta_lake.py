@@ -3,10 +3,8 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from extralo.source import Source
 
-
-class DeltaLakeSource(Source):
+class DeltaLakeSource:
     """A source class for extracting data from Delta Lake tables.
 
     Args:
@@ -45,7 +43,7 @@ class DeltaLakeSource(Source):
         return f"{self.__class__.__name__}(table_uri={self._table_uri})"
 
 
-class SparkDeltaLakeSource(Source):
+class SparkDeltaLakeSource:
     """A source class for extracting data from a Delta Lake using Spark.
 
     Args:
@@ -57,7 +55,7 @@ class SparkDeltaLakeSource(Source):
         self._spark = spark
         self._query = query
 
-    def extract(self):
+    def extract(self) -> pd.DataFrame:
         """Executes the SQL query on the Delta Lake and returns the result as a pandas DataFrame.
 
         Returns:

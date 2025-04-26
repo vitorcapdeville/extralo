@@ -1,13 +1,11 @@
 import os.path
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 import pandas as pd
 
-from extralo.destination import Destination
 
-
-class FileDestination(Destination, ABC):
+class FileDestination(ABC):
     """Represents a destination that writes data to a file.
 
     Args:
@@ -18,6 +16,15 @@ class FileDestination(Destination, ABC):
     def __init__(self, file: str, **kwargs: Any) -> None:
         self._file = file
         self._kwargs = kwargs
+
+    @abstractmethod
+    def load(self, data: pd.DataFrame) -> None:
+        """Load the given pandas DataFrame to the destination.
+
+        Args:
+            data (DataFrame): The DataFrame to be saved.
+        """
+        raise NotImplementedError
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file={self._file})"

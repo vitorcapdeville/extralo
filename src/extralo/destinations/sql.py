@@ -2,10 +2,8 @@ from typing import Any, Literal
 
 import pandas as pd
 
-from extralo.destination import Destination
 
-
-class SQLDestination(Destination):
+class SQLDestination:
     """A class representing a SQL destination for loading data.
 
     Args:
@@ -35,7 +33,7 @@ class SQLDestination(Destination):
         Args:
             data (DataFrame): The pandas DataFrame to be loaded.
         """
-        data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
+        data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)  # type: ignore
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table}, schema={self._schema}, if_exists={self._if_exists})"

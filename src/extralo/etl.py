@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import inspect
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Sized
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
-from typing import get_type_hints
+from typing import Generic, TypeVar
 
 import loguru
 from loguru import logger
 
 from extralo.destination import Destination
 from extralo.source import Source
-from extralo.typing import DataFrame
+
+T = TypeVar("T", bound=Sized)
 
 
 class IncompatibleStepsError(Exception):
@@ -45,7 +46,7 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
 
 def _validate_etl(
     sources_keys: set[str],
-    transform_method: Callable[..., dict[str, DataFrame]] | None,
+    transform_method: Callable[..., dict[str, T]] | None,
     destinations_keys: set[str],
 ) -> None:
     if transform_method is None:
@@ -62,33 +63,21 @@ def _validate_etl(
     if trasnform_args.varkw is None:
         _validate_steps(set(sources_keys), "extract", set(trasnform_args.args[1:]), "transform")
 
-    transform_return_type_hint = get_type_hints(transform_method).get("return", None)
 
-    try:
-        transform_output_dict = get_type_hints(transform_return_type_hint)
-    except TypeError:
-        warnings.warn(
-            "Transformer output type hints are not a TypedDict, validation will be done only at runtime.", stacklevel=1
-        )
-        return
-
-    _validate_steps(set(transform_output_dict.keys()), "transform", destinations_keys, "load")
-
-
-def _extract(source: Source, logger: loguru.Logger) -> DataFrame:
+def _extract(source: Source[T], logger: loguru.Logger) -> T:
     logger.info(f"Starting extraction for {source}")
     data = source.extract()
     logger.info(f"Extracted {len(data)} records from {source}")
     return data
 
 
-def _load(data: DataFrame, destination: Destination, logger: loguru.Logger) -> None:
+def _load(data: T, destination: Destination[T], logger: loguru.Logger) -> None:
     logger.info(f"Starting load of {len(data)} records to {destination}")
     destination.load(data)
     logger.info(f"Loaded {len(data)} records to {destination}")
 
 
-class ETL:
+class ETL(Generic[T]):
     """ETL - Extract, Load and Transform data from sources to destinations.
 
     The ETL class provide functionality around the extract, load and transform operations.
@@ -111,9 +100,6 @@ class ETL:
     However, in the transform step, it's not possible to validated the keys, since the transformer can change the keys
     of the data. In this case, the validation will be done only at runtime.
 
-    This can be resolved using return type annotations and the `TypedDict` from `typing` module. If the transformer
-    return a `TypedDict`, the keys will be validated at initialization.
-
     It's strongly recommended to use Pandera decorators to validate the data in the transform callable.
 
     Args:
@@ -127,9 +113,9 @@ class ETL:
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        sources: dict[str, Source],
-        destinations: dict[str, list[Destination]],
-        transformer: Callable[..., dict[str, DataFrame]] | None = None,
+        sources: dict[str, Source[T]],
+        destinations: dict[str, list[Destination[T]]],
+        transformer: Callable[..., dict[str, T]] | None = None,
         name: str | None = None,
     ) -> None:
         self._logger = logger.bind(etl_name=name, status="pending")
@@ -179,7 +165,7 @@ class ETL:
                 f"ETL process for {self._name} executed successfully."
             )
 
-    def extract(self) -> dict[str, DataFrame]:
+    def extract(self) -> dict[str, T]:
         """Extract the data from the provided sources and load it into a dictionary with same keys as the sources.
 
         The extraction is done in parallel, using threads.
@@ -193,7 +179,7 @@ class ETL:
         names = self._sources.keys()
         return dict(zip(names, extracted_data, strict=True))
 
-    def transform(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
+    def transform(self, data: dict[str, T]) -> dict[str, T]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
 
         This method use the `etl` logger to log the extraction process, which can be customized by the user.
@@ -214,7 +200,7 @@ class ETL:
         self._logger.info(f"Tranformed data with {self._transformer}")
         return data
 
-    def load(self, data: dict[str, DataFrame]) -> None:
+    def load(self, data: dict[str, T]) -> None:
         """Load the data to the provided destinations.
 
         The data will be loaded in parallel, using threads.
@@ -241,10 +227,10 @@ class ETL:
                     raise Exception(f"Failed to load data: {e}") from e
 
 
-class ETLSequentialLoad(ETL):
+class ETLSequentialLoad(ETL[T]):
     """Same as ETL, but loads the data sequentially instead of in parallel."""
 
-    def load(self, data: dict[str, DataFrame]) -> None:
+    def load(self, data: dict[str, T]) -> None:
         """Load the data to the provided destinations.
 
         The data will be loaded sequentially.

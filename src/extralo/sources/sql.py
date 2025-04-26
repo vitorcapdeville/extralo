@@ -2,11 +2,8 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from extralo.source import Source
-from extralo.typing import DataFrame
 
-
-class SQLSource(Source):
+class SQLSource:
     """A class representing a SQL data source.
 
     Requires sqlparse and sqlalchemy to be installed. The SQL query is executed using the provided database engine.
@@ -36,7 +33,7 @@ class SQLSource(Source):
         self._query = query
         self._params = params or {}
 
-    def extract(self) -> DataFrame:
+    def extract(self) -> pd.DataFrame:
         """Extracts data from the database using the provided SQL query.
 
         Returns:
