@@ -9,11 +9,7 @@ authors = [{ name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" }]
 maintainers = [
     { name = "Vitor Capdeville", email = "vgcapdeville@hotmail.com" },
 ]
-dependencies = [
-    "pandas",
-    "loguru",
-    "pandas-stubs",
-]
+dependencies = ["loguru"]
 
 [build-system]
 requires = ["hatchling"]
@@ -21,10 +17,19 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 sql = ["sqlalchemy", "sqlparse"]
-validation = ["pandera"]
 deltalake = ["deltalake"]
 spark = ["pyspark", "delta-spark"]
-all = ["sqlalchemy", 'pandera[pyspark]', "deltalake", "pyspark", "openpyxl"]
+pandas = ["pandas", "openpyxl", "pandas-stubs"]
+all = [
+    "sqlalchemy",
+    "sqlparse",
+    "deltalake",
+    "pyspark",
+    "delta-spark",
+    "pandas",
+    "openpyxl",
+    "pandas-stubs",
+]
 
 [tool.pyright]
 exclude = [".venv", "docs", "docs_src", "tests", "main.py"]
