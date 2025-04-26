@@ -23,7 +23,6 @@ __all__ = [
     "SASSource",
     "XLSXSource",
     "SQLDestination",
-    "NullDestination",
     "CSVAppendDestination",
     "CSVDestination",
     "XLSXAppendDestination",

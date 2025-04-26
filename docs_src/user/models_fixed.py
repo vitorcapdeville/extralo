@@ -1,16 +1,12 @@
 import pandera as pa
 
-before_schema = pa.DataFrameSchema(
-    {
-        "client": pa.Column(pa.String),
-        "policy_start_date": pa.Column(pa.String),
-    }
-)
 
-after_schema = pa.DataFrameSchema(
-    {
-        "client": pa.Column(pa.String),
-        "policy_start_date": pa.Column(pa.DateTime),
-        "days_since_start": pa.Column(pa.Int),
-    }
-)
+class BeforeSchema(pa.DataFrameModel):
+    client: str
+    policy_start_date: str
+
+
+class AfterSchema(pa.DataFrameModel):
+    client: str
+    policy_start_date: pa.DateTime
+    days_since_start: int

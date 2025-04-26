@@ -10,14 +10,11 @@ If we execute the ETL pipeline again, we will see some logs printed to the conso
 
 ```console
 $ python etl.py
-2024-10-13 22:36:38.554 | WARNING  | extralo.etl:__init__:158 - Transformer output type hints are not a TypedDict, validation will be done only at runtime.
-2024-10-13 22:36:38.554 | INFO     | extralo.etl:execute:177 - Starting ETL process for basic_etl_with_logging.
-2024-10-13 22:36:38.554 | INFO     | extralo.etl:_extract:77 - Starting extraction for CSVSource(file=data.csv)
-2024-10-13 22:36:38.556 | INFO     | extralo.etl:_extract:79 - Extracted 5 records from CSVSource(file=data.csv)
-2024-10-13 22:36:38.557 | INFO     | extralo.etl:_validate:85 - Skipping validation since no schema was provided.
-2024-10-13 22:36:38.559 | INFO     | extralo.etl:transform:244 - Tranformed data with MyTransformer
-2024-10-13 22:36:38.559 | INFO     | extralo.etl:_validate:85 - Skipping validation since no schema was provided.
-2024-10-13 22:36:38.560 | INFO     | extralo.etl:_load:92 - Starting load of 5 records to SQLDestination(table=data_group, schema=None, if_exists=replace)
-2024-10-13 22:36:38.579 | INFO     | extralo.etl:_load:94 - Loaded 5 records to SQLDestination(table=data_group, schema=None, if_exists=replace)
-2024-10-13 22:36:38.580 | SUCCESS  | extralo.etl:execute:194 - ETL process for basic_etl_with_logging executed successfully.
+2025-04-26 17:16:09.573 | INFO     | extralo.etl:execute:147 - Starting ETL process for basic_etl_with_logging.
+2025-04-26 17:16:09.573 | INFO     | extralo.etl:_extract:71 - Starting extraction for CSVSource(file=data.csv)
+2025-04-26 17:16:09.575 | INFO     | extralo.etl:_extract:73 - Extracted 5 records from CSVSource(file=data.csv)
+2025-04-26 17:16:09.577 | INFO     | extralo.etl:transform:202 - Tranformed data with <function my_transformer at 0x70eb71b36f20>
+2025-04-26 17:16:09.578 | INFO     | extralo.etl:_load:78 - Starting load of 5 records to SQLDestination(table=data_group, schema=None, if_exists=replace)
+2025-04-26 17:16:09.598 | INFO     | extralo.etl:_load:80 - Loaded 5 records to SQLDestination(table=data_group, schema=None, if_exists=replace)
+2025-04-26 17:16:09.598 | SUCCESS  | extralo.etl:execute:166 - ETL process for basic_etl_with_logging executed successfully.
 ```

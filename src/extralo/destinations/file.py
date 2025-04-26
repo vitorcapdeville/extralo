@@ -1,13 +1,11 @@
 import os.path
-from abc import ABC
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import Any, Literal, Optional
 
 import pandas as pd
 
-from extralo.destination import Destination
 
-
-class FileDestination(Destination, ABC):
+class FileDestination(ABC):
     """Represents a destination that writes data to a file.
 
     Args:
@@ -18,6 +16,15 @@ class FileDestination(Destination, ABC):
     def __init__(self, file: str, **kwargs: Any) -> None:
         self._file = file
         self._kwargs = kwargs
+
+    @abstractmethod
+    def load(self, data: pd.DataFrame) -> None:
+        """Load the given pandas DataFrame to the destination.
+
+        Args:
+            data (DataFrame): The DataFrame to be saved.
+        """
+        raise NotImplementedError
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file={self._file})"
@@ -48,7 +55,7 @@ class XLSXDestination(FileDestination):
         Args:
             data (DataFrame): The DataFrame to be saved.
         """
-        data.to_excel(self._file, **self._kwargs)
+        data.to_excel(self._file, **self._kwargs)  # type: ignore
 
 
 class XLSXAppendDestination(FileDestination):
@@ -57,10 +64,16 @@ class XLSXAppendDestination(FileDestination):
     This class cannot be used with the parallel ETL.
     """
 
-    def __init__(self, file: str, mode: str, if_sheet_exists: str = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        file: str,
+        mode: Literal["w", "a"],
+        if_sheet_exists: Optional[Literal["error", "new", "replace", "overlay"]] = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(file, **kwargs)
-        self._mode = mode
-        self._if_sheet_exists = if_sheet_exists
+        self._mode: Literal["w", "a"] = mode
+        self._if_sheet_exists: Optional[Literal["error", "new", "replace", "overlay"]] = if_sheet_exists
 
     def load(self, data: pd.DataFrame) -> None:
         """Append the given pandas DataFrame to a XLSX file.
@@ -69,7 +82,7 @@ class XLSXAppendDestination(FileDestination):
             data (DataFrame): The DataFrame to be saved.
         """
         with pd.ExcelWriter(self._file, mode=self._mode, if_sheet_exists=self._if_sheet_exists) as writer:
-            data.to_excel(writer, **self._kwargs)
+            data.to_excel(writer, **self._kwargs)  # type: ignore
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file={self._file}, mode={self._mode})"

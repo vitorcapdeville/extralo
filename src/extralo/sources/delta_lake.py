@@ -1,11 +1,10 @@
+# type: ignore
 from typing import Any, Optional
 
 import pandas as pd
 
-from extralo.source import Source
 
-
-class DeltaLakeSource(Source):
+class DeltaLakeSource:
     """A source class for extracting data from Delta Lake tables.
 
     Args:
@@ -21,7 +20,7 @@ class DeltaLakeSource(Source):
         **kwargs: Any,
     ) -> None:
         try:
-            import deltalake  # noqa: F401
+            import deltalake  # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "DeltaLake is required to use DeltaLakeSource. Please install it with `pip install deltalake`."
@@ -36,7 +35,7 @@ class DeltaLakeSource(Source):
         Returns:
             DataFrame: The extracted data as a pandas DataFrame.
         """
-        import deltalake as dl
+        import deltalake as dl  # noqa: PLC0415
 
         return dl.DeltaTable(self._table_uri).to_pandas(partitions=self._partitions, **self._kwargs)
 
@@ -44,7 +43,7 @@ class DeltaLakeSource(Source):
         return f"{self.__class__.__name__}(table_uri={self._table_uri})"
 
 
-class SparkDeltaLakeSource(Source):
+class SparkDeltaLakeSource:
     """A source class for extracting data from a Delta Lake using Spark.
 
     Args:
@@ -56,7 +55,7 @@ class SparkDeltaLakeSource(Source):
         self._spark = spark
         self._query = query
 
-    def extract(self):
+    def extract(self) -> pd.DataFrame:
         """Executes the SQL query on the Delta Lake and returns the result as a pandas DataFrame.
 
         Returns:
