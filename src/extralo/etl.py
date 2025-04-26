@@ -47,7 +47,6 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
 def _validate_etl(
     sources_keys: set[str],
     transform_method: Callable[..., dict[str, T]] | None,
-    destinations_keys: set[str],
 ) -> None:
     if transform_method is None:
         return
@@ -125,8 +124,7 @@ class ETL(Generic[T]):
 
             _validate_etl(
                 set(sources.keys()),
-                transformer if transformer else None,
-                set(destinations.keys()),
+                transformer,
             )
         for warn in warns:
             self._logger.warning(warn.message)
