@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from transformer import MyTransformer
+from transformer import my_transformer
 
 from extralo import ETL, CSVSource, SQLDestination
 
@@ -9,7 +9,7 @@ etl = ETL(
     sources={
         "data": CSVSource("data.csv"),
     },
-    transformer=MyTransformer(),
+    transformer=my_transformer,
     destinations={
         "data": [
             SQLDestination(engine, "data_group", None, if_exists="replace"),

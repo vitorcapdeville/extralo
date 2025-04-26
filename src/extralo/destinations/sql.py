@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ class SQLDestination:
     """
 
     def __init__(
-        self, engine: Any, table: str, schema: str | None, if_exists: Literal["fail", "replace", "append"]
+        self, engine: Any, table: str, schema: Optional[str], if_exists: Literal["fail", "replace", "append"]
     ) -> None:
         try:
             import sqlalchemy  # type: ignore # noqa: F401, PLC0415

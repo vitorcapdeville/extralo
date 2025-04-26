@@ -1,6 +1,6 @@
 import os.path
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import pandas as pd
 
@@ -68,12 +68,12 @@ class XLSXAppendDestination(FileDestination):
         self,
         file: str,
         mode: Literal["w", "a"],
-        if_sheet_exists: Literal["error", "new", "replace", "overlay"] | None = None,
+        if_sheet_exists: Optional[Literal["error", "new", "replace", "overlay"]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(file, **kwargs)
         self._mode: Literal["w", "a"] = mode
-        self._if_sheet_exists: Literal["error", "new", "replace", "overlay"] | None = if_sheet_exists
+        self._if_sheet_exists: Optional[Literal["error", "new", "replace", "overlay"]] = if_sheet_exists
 
     def load(self, data: pd.DataFrame) -> None:
         """Append the given pandas DataFrame to a XLSX file.

@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable, Sized
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from functools import partial
-from typing import Generic, TypeVar
+from typing import Generic, Optional, TypeVar
 
 import loguru
 from loguru import logger
@@ -14,6 +14,8 @@ from extralo.destination import Destination
 from extralo.source import Source
 
 T = TypeVar("T", bound=Sized)
+
+TransformerFunction = Callable[..., dict[str, T]]
 
 
 class IncompatibleStepsError(Exception):
@@ -46,21 +48,17 @@ def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str],
 
 def _validate_etl(
     sources_keys: set[str],
-    transform_method: Callable[..., dict[str, T]] | None,
+    transform_method: Optional[TransformerFunction[T]],  # noqa: UP045
 ) -> None:
     if transform_method is None:
         return
 
     trasnform_args = inspect.getargs(transform_method.__code__)
 
-    if trasnform_args.varargs is not None:
-        raise ValueError("Transformer transform method should not accept *args.")
-
-    if trasnform_args.varkw is not None and len(trasnform_args.args) > 1:
-        raise ValueError("Transformer transform method should only accept **kwargs or usually defined arguments.")
+    args = set(trasnform_args.args) - {"self", "cls"}
 
     if trasnform_args.varkw is None:
-        _validate_steps(set(sources_keys), "extract", set(trasnform_args.args[1:]), "transform")
+        _validate_steps(set(sources_keys), "extract", args, "transform")
 
 
 def _extract(source: Source[T], logger: loguru.Logger) -> T:
@@ -114,8 +112,8 @@ class ETL(Generic[T]):
         self,
         sources: dict[str, Source[T]],
         destinations: dict[str, list[Destination[T]]],
-        transformer: Callable[..., dict[str, T]] | None = None,
-        name: str | None = None,
+        transformer: Optional[TransformerFunction[T]] = None,  # noqa: UP045
+        name: Optional[str] = None,  # noqa: UP045
     ) -> None:
         self._logger = logger.bind(etl_name=name, status="pending")
 
@@ -175,7 +173,7 @@ class ETL(Generic[T]):
         with ThreadPoolExecutor(max_workers=5) as executor:
             extracted_data = executor.map(lambda *args: _extract(*args, logger=self._logger), self._sources.values())
         names = self._sources.keys()
-        return dict(zip(names, extracted_data, strict=True))
+        return dict(zip(names, extracted_data))
 
     def transform(self, data: dict[str, T]) -> dict[str, T]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
