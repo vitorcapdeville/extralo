@@ -247,7 +247,7 @@ class ETL:
             return data
 
         data = self._transformer.transform(**data)
-        self._logger.info(f"Tranformed data with {self._transformer}")
+        self._logger.info(f"Transformed data with {self._transformer}")
         return data
 
     def after_validate(self, data: dict[str, DataFrame]) -> dict[str, DataFrame]:
