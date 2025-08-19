@@ -12,6 +12,7 @@ maintainers = [
 ]
 dependencies = ["pandas", "loguru"]
 
+
 [project.optional-dependencies]
 sql = ["sqlalchemy"]
 validation = ["pandera"]
