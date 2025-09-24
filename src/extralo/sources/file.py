@@ -49,7 +49,7 @@ class CSVSource(FileSource[pd.DataFrame]):
 
 
 class XLSXSource(FileSource[pd.DataFrame]):
-    """A class representing an XLSX data source.
+    """A class representing a XLSX data source.
 
     This class inherits from the FileSource class and provides a method to extract data from a XLSX file.
     """
@@ -65,15 +65,30 @@ class XLSXSource(FileSource[pd.DataFrame]):
 
 
 class SASSource(FileSource[pd.DataFrame]):
-    """A class representing an SAS data source.
+    """A class representing a SAS data source.
 
-    This class inherits from the FileSource class and provides a method to extract data from a XLSX file.
+    This class inherits from the FileSource class and provides a method to extract data from a SAS file.
     """
 
     def extract(self) -> pd.DataFrame:
-        """Extracts data from an SAS file.
+        """Extracts data from a SAS file.
 
         Returns:
             DataFrame: The extracted data.
         """
         return pd.read_sas(self._file, **self._kwargs)
+
+
+class JSONSource(FileSource[pd.DataFrame]):
+    """A class representing a JSON data source.
+
+    This class inherits from the FileSource class and provides a method to extract data from a JSON file.
+    """
+
+    def extract(self) -> pd.DataFrame:
+        """Extracts data from a JSON file.
+
+        Returns:
+            DataFrame: The extracted data.
+        """
+        return pd.read_json(self._file, **self._kwargs)

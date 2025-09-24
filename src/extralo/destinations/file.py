@@ -1,3 +1,4 @@
+import json
 import os.path
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional
@@ -104,3 +105,34 @@ class CSVAppendDestination(FileDestination):
             data.to_csv(self._file, mode="a", header=False, **self._kwargs)
             return
         data.to_csv(self._file, mode="w", header=True, **self._kwargs)
+
+
+class JSONDestination(FileDestination):
+    """A destination class for saving data from a pandas Data Frame to a JSON file."""
+
+    def load(self, data: pd.DataFrame):
+        """Save the given pandas DataFrame to a JSON file.
+
+        If the file already exists, it will be overwritten.
+
+        Args:
+            data (DataFrame): The DataFrame to be saved.
+        """
+        data.to_json(self._file, **self._kwargs)  # type: ignore
+
+
+class JSONObjDestination(FileDestination):
+    """A destination class for saving a Python Object to a JSON file."""
+
+    def __init__(self, file: str, encoding: str = "utf-8", **kwargs: Any):
+        super().__init__(file, **kwargs)
+        self._encoding = encoding
+
+    def load(self, data: Any):
+        """Save the given object to a JSON file.
+
+        Args:
+            data (Any): The Python Object to be saved.
+        """
+        with open(self._file, "w", encoding=self._encoding) as file:
+            json.dump(data, fp=file, **self._kwargs)
