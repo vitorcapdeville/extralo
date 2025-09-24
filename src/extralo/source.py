@@ -1,22 +1,15 @@
-from abc import ABC, abstractmethod
+from typing import Generic, Protocol, TypeVar
 
-from extralo.typing import DataFrame
+T_co = TypeVar("T_co", covariant=True)
 
 
-class Source(ABC):
-    """Abstract base class for data sources."""
+class Source(Generic[T_co], Protocol):
+    """Generic protocol for a source that extracts data from somewhere."""
 
-    @abstractmethod
-    def extract(self) -> DataFrame:
-        """Extracts data from a source and returns it as a DataFrame.
+    def extract(self) -> T_co:
+        """Extracts data from a source and returns it.
 
         Returns:
-            DataFrame: The extracted data.
+            T_co: The extracted data.
         """
         raise NotImplementedError
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
-    def __str__(self) -> str:
-        return self.__repr__()

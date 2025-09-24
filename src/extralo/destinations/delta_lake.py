@@ -1,10 +1,10 @@
+# type: ignore
 from typing import Any, Literal, Optional, Union
 
-from extralo.destination import Destination
-from extralo.typing import DataFrame
+import pandas as pd
 
 
-class DeltaLakeDestination(Destination):
+class DeltaLakeDestination:
     """A destination class for saving data to a Delta Lake table.
 
     Args:
@@ -21,7 +21,7 @@ class DeltaLakeDestination(Destination):
         **kwargs: Any,
     ) -> None:
         try:
-            import deltalake  # noqa: F401
+            import deltalake  # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "DeltaLake is required to use DeltaLakeDestination. Please install it with `pip install deltalake`."
@@ -35,13 +35,13 @@ class DeltaLakeDestination(Destination):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table_uri}, mode={self._mode})"
 
-    def load(self, data: DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> None:
         """Loads the given DataFrame into the Delta Lake table.
 
         Args:
             data (DataFrame): The DataFrame to be loaded.
         """
-        import deltalake as dl
+        import deltalake as dl  # noqa: PLC0415
 
         if self._schema:
             import pyarrow as pa
@@ -53,7 +53,7 @@ class DeltaLakeDestination(Destination):
         )
 
 
-class SparkDeltaLakeDestination(Destination):
+class SparkDeltaLakeDestination:
     """A class to handle data loading into a Delta Lake table using Apache Spark.
 
     Args:
@@ -65,7 +65,7 @@ class SparkDeltaLakeDestination(Destination):
         **kwargs: Additional keyword arguments to be passed to the save function.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         spark,
         table: str,
@@ -83,7 +83,7 @@ class SparkDeltaLakeDestination(Destination):
         self._kwargs = kwargs
         self._schema = schema
 
-    def load(self, data: DataFrame):
+    def load(self, data: pd.DataFrame):
         """Loads the provided data into the Delta Lake table.
 
         Args:

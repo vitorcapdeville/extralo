@@ -1,13 +1,13 @@
-from abc import ABC
-from typing import Any
+# type: ignore
+from abc import ABC, abstractmethod
+from typing import Any, Generic, TypeVar
 
 import pandas as pd
 
-from extralo.source import Source
-from extralo.typing import DataFrame
+T = TypeVar("T")
 
 
-class FileSource(Source, ABC):
+class FileSource(ABC, Generic[T]):
     """Represents a file source.
 
     Args:
@@ -19,20 +19,26 @@ class FileSource(Source, ABC):
         self._file = file
         self._kwargs = kwargs
 
+    @abstractmethod
+    def extract(self) -> T:
+        """Extracts data from a file.
+
+        Returns:
+            T: The extracted data.
+        """
+        raise NotImplementedError
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file={self._file})"
 
 
-class CSVSource(FileSource):
+class CSVSource(FileSource[pd.DataFrame]):
     """A class representing a CSV data source.
 
     This class inherits from the FileSource class and provides a method to extract data from a CSV file.
     """
 
-    def __init__(self, file: str, **kwargs: Any) -> None:
-        super().__init__(file, **kwargs)
-
-    def extract(self) -> DataFrame:
+    def extract(self) -> pd.DataFrame:
         """Extracts data from a CSV file.
 
         Returns:
@@ -42,16 +48,13 @@ class CSVSource(FileSource):
         return data
 
 
-class XLSXSource(FileSource):
+class XLSXSource(FileSource[pd.DataFrame]):
     """A class representing an XLSX data source.
 
     This class inherits from the FileSource class and provides a method to extract data from a XLSX file.
     """
 
-    def __init__(self, file: str, **kwargs: Any) -> None:
-        super().__init__(file, **kwargs)
-
-    def extract(self) -> DataFrame:
+    def extract(self) -> pd.DataFrame:
         """Extracts data from an Excel file.
 
         Returns:
@@ -61,13 +64,13 @@ class XLSXSource(FileSource):
         return data
 
 
-class SASSource(FileSource):
+class SASSource(FileSource[pd.DataFrame]):
     """A class representing an SAS data source.
 
     This class inherits from the FileSource class and provides a method to extract data from a XLSX file.
     """
 
-    def extract(self) -> Any:
+    def extract(self) -> pd.DataFrame:
         """Extracts data from an SAS file.
 
         Returns:

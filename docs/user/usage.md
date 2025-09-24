@@ -10,18 +10,18 @@ In this case, we will calculate the number of days since the policy start date:
 --8<-- "./docs_src/user/transformer.py"
 ```
 
-Notice how we defined the argument to transform with the name `data`. This name must be the same name used in the sources definition in the next step.
+Notice how we defined the argument to `my_transform` function with the name `data`. This name must be the same name used in the sources definition in the next step.
 Also, notice how we returned a dict of DataFrame. This is required since we could return multiple data from this step.
 
 Lets define a SQLite database engine to use as destination:
 
-```python hl_lines="2 5" title="etl.py"
+```python hl_lines="1 6" title="etl.py"
 --8<-- "./docs_src/user/basic_etl.py"
 ```
 
 Now we can define the ETL pipeline. We can import the transformer we created earlier to transform the data:
 
-```python hl_lines="1 3 7-19" title="etl.py"
+```python hl_lines="2 4 8-18 20" title="etl.py"
 --8<-- "./docs_src/user/basic_etl.py"
 ```
 
@@ -50,4 +50,4 @@ $ python query.py
 4      Eve        2024-05-05                91
 ```
 
-This is the simpleste example, but ExTraLo can do more. In the next sections, you will se how to add logging and validation to the process, and also how to extract from multiple source and load to multiple destinations.
+This is the simpleste example, but ExTraLo can do more. In the next sections, you will see how to add logging and validation to the process, and also how to extract from multiple source and load to multiple destinations.

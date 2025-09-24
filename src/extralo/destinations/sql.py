@@ -1,11 +1,9 @@
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import pandas as pd
 
-from extralo.destination import Destination
 
-
-class SQLDestination(Destination):
+class SQLDestination:
     """A class representing a SQL destination for loading data.
 
     Args:
@@ -15,16 +13,18 @@ class SQLDestination(Destination):
         if_exists (str): The action to take if the table already exists.
     """
 
-    def __init__(self, engine: Any, table: str, schema: str, if_exists: Literal["fail", "replace", "append"]) -> None:
+    def __init__(
+        self, engine: Any, table: str, schema: Optional[str], if_exists: Literal["fail", "replace", "append"]
+    ) -> None:
         try:
-            import sqlalchemy  # noqa: F401
+            import sqlalchemy  # type: ignore # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "SQLAlchemy is required to use SQLDestination. Please install it with `pip install sqlalchemy`."
             ) from err
         self._engine = engine
         self._table = table
-        self._if_exists = if_exists
+        self._if_exists: Literal["fail", "replace", "append"] = if_exists
         self._schema = schema
 
     def load(self, data: pd.DataFrame) -> None:
@@ -33,7 +33,7 @@ class SQLDestination(Destination):
         Args:
             data (DataFrame): The pandas DataFrame to be loaded.
         """
-        data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)
+        data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)  # type: ignore
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table}, schema={self._schema}, if_exists={self._if_exists})"
@@ -52,7 +52,7 @@ class SQLAppendDestination(SQLDestination):
 
     def __init__(self, engine: Any, table: str, schema: str, group_column: str, group_value: Any) -> None:
         try:
-            import sqlalchemy  # noqa: F401
+            import sqlalchemy  # type: ignore # noqa: F401, PLC0415
         except ImportError as err:
             raise ImportError(
                 "SQLAlchemy is required to use SQLAppendDestination. Please install it with `pip install sqlalchemy`."
@@ -71,7 +71,7 @@ class SQLAppendDestination(SQLDestination):
         Raises:
             KeyError: If the specified group column is not found in the table.
         """
-        import sqlalchemy as sa
+        import sqlalchemy as sa  # noqa: PLC0415
 
         insp = sa.inspect(self._engine)
         if insp.has_table(self._table, self._schema):

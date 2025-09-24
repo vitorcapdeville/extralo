@@ -1,6 +1,6 @@
 from loguru import logger
 from sqlalchemy import create_engine
-from transformer import MyTransformer
+from transformer import my_transformer
 
 from extralo import ETL, CSVSource, SQLDestination
 
@@ -12,7 +12,7 @@ etl = ETL(
     sources={
         "data": CSVSource(file="data.csv"),
     },
-    transformer=MyTransformer(),
+    transformer=my_transformer,
     destinations={
         "data": [
             SQLDestination(engine=engine, table="data_group", schema=None, if_exists="replace"),
