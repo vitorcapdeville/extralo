@@ -193,7 +193,8 @@ class ETL(Generic[T]):
             return data
 
         data = self._transformer(**data)
-        self._logger.info(f"Tranformed data with {self._transformer}")
+        self._logger.info(f"Transformed data with {self._transformer}")
+
         return data
 
     def load(self, data: dict[str, T]) -> None:

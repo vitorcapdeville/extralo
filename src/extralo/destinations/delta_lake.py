@@ -16,7 +16,8 @@ class DeltaLakeDestination:
         self,
         table_uri: str,
         mode: Literal["error", "append", "overwrite", "ignore"],
-        partition_by: Optional[Union[list[str], str]],
+        partition_by: Optional[Union[list[str], str]] = None,
+        schema: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -29,6 +30,7 @@ class DeltaLakeDestination:
         self._mode = mode
         self._partition_by = partition_by
         self._kwargs = kwargs
+        self._schema = schema
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table_uri}, mode={self._mode})"
@@ -40,6 +42,11 @@ class DeltaLakeDestination:
             data (DataFrame): The DataFrame to be loaded.
         """
         import deltalake as dl  # noqa: PLC0415
+
+        if self._schema:
+            import pyarrow as pa
+
+            data = pa.Table.from_pandas(data).cast(self._schema)
 
         dl.write_deltalake(
             table_or_uri=self._table_uri, data=data, mode=self._mode, partition_by=self._partition_by, **self._kwargs
