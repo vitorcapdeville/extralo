@@ -35,22 +35,26 @@ class DeltaLakeDestination:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table_uri}, mode={self._mode})"
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Loads the given DataFrame into the Delta Lake table.
 
         Args:
             data (DataFrame): The DataFrame to be loaded.
+
+        Returns:
+            DataFrame: The data that was loaded.
         """
         import deltalake as dl  # noqa: PLC0415
 
         if self._schema:
-            import pyarrow as pa
+            import pyarrow as pa  # noqa: PLC0415
 
             data = pa.Table.from_pandas(data).cast(self._schema)
 
         dl.write_deltalake(
             table_or_uri=self._table_uri, data=data, mode=self._mode, partition_by=self._partition_by, **self._kwargs
         )
+        return data
 
 
 class SparkDeltaLakeDestination:
@@ -83,11 +87,14 @@ class SparkDeltaLakeDestination:
         self._kwargs = kwargs
         self._schema = schema
 
-    def load(self, data: pd.DataFrame):
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Loads the provided data into the Delta Lake table.
 
         Args:
             data (DataFrame): The data to be loaded into the Delta Lake table.
+
+        Returns:
+            DataFrame: The data that was loaded.
         """
         df = self._spark.createDataFrame(data, schema=self._schema)
         df.write.saveAsTable(
@@ -98,6 +105,7 @@ class SparkDeltaLakeDestination:
             format="delta",
             **self._kwargs,
         )
+        return data
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table}, mode={self._mode})"

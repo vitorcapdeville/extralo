@@ -4,6 +4,7 @@ from .destinations import (
     CSVAppendDestination,
     CSVDestination,
     DeltaLakeDestination,
+    InMemoryDestination,
     JSONDestination,
     JSONObjDestination,
     SparkDeltaLakeDestination,
@@ -37,4 +38,5 @@ __all__ = [
     "JSONDestination",
     "JSONObjDestination",
     "JSONSource",
+    "InMemoryDestination",
 ]

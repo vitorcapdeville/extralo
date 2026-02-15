@@ -27,13 +27,17 @@ class SQLDestination:
         self._if_exists: Literal["fail", "replace", "append"] = if_exists
         self._schema = schema
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Loads the given pandas DataFrame into an SQL table.
 
         Args:
             data (DataFrame): The pandas DataFrame to be loaded.
+
+        Returns:
+            DataFrame: The data that was loaded.
         """
         data.to_sql(name=self._table, schema=self._schema, con=self._engine, if_exists=self._if_exists, index=False)  # type: ignore
+        return data
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(table={self._table}, schema={self._schema}, if_exists={self._if_exists})"
@@ -62,11 +66,14 @@ class SQLAppendDestination(SQLDestination):
         self._group_column = group_column
         self._group_value = group_value
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Load data into the SQL table after deleting rows with a specific group value.
 
         Args:
             data (DataFrame): The data to be loaded into the table.
+
+        Returns:
+            DataFrame: The data that was loaded.
 
         Raises:
             KeyError: If the specified group column is not found in the table.
@@ -84,3 +91,4 @@ class SQLAppendDestination(SQLDestination):
                 conn.execute(stmt)
 
         super().load(data)
+        return data

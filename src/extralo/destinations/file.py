@@ -19,11 +19,14 @@ class FileDestination(ABC):
         self._kwargs = kwargs
 
     @abstractmethod
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Load the given pandas DataFrame to the destination.
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         raise NotImplementedError
 
@@ -34,29 +37,37 @@ class FileDestination(ABC):
 class CSVDestination(FileDestination):
     """A destination class for saving data to a CSV file."""
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Save the given pandas DataFrame to a CSV file.
 
         If the file already exists, it will be overwritten.
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         data.to_csv(self._file, **self._kwargs)
+        return data
 
 
 class XLSXDestination(FileDestination):
     """A destination class for saving data to a XLSX file."""
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Save the given pandas DataFrame to a XLSX file.
 
         If the file already exists, it will be overwritten.
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         data.to_excel(self._file, **self._kwargs)  # type: ignore
+        return data
 
 
 class XLSXAppendDestination(FileDestination):
@@ -76,14 +87,18 @@ class XLSXAppendDestination(FileDestination):
         self._mode: Literal["w", "a"] = mode
         self._if_sheet_exists: Optional[Literal["error", "new", "replace", "overlay"]] = if_sheet_exists
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Append the given pandas DataFrame to a XLSX file.
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         with pd.ExcelWriter(self._file, mode=self._mode, if_sheet_exists=self._if_sheet_exists) as writer:
             data.to_excel(writer, **self._kwargs)  # type: ignore
+        return data
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file={self._file}, mode={self._mode})"
@@ -92,7 +107,7 @@ class XLSXAppendDestination(FileDestination):
 class CSVAppendDestination(FileDestination):
     """A destination class for appending data to a CSV file."""
 
-    def load(self, data: pd.DataFrame) -> None:
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Append the given pandas DataFrame to a CSV file.
 
         If the file already exists, it will be appended, and will be assumed that the headers
@@ -100,25 +115,33 @@ class CSVAppendDestination(FileDestination):
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         if os.path.isfile(self._file):
             data.to_csv(self._file, mode="a", header=False, **self._kwargs)
-            return
+            return data
         data.to_csv(self._file, mode="w", header=True, **self._kwargs)
+        return data
 
 
 class JSONDestination(FileDestination):
     """A destination class for saving data from a pandas Data Frame to a JSON file."""
 
-    def load(self, data: pd.DataFrame):
+    def load(self, data: pd.DataFrame) -> pd.DataFrame:
         """Save the given pandas DataFrame to a JSON file.
 
         If the file already exists, it will be overwritten.
 
         Args:
             data (DataFrame): The DataFrame to be saved.
+
+        Returns:
+            DataFrame: The data that was saved.
         """
         data.to_json(self._file, **self._kwargs)  # type: ignore
+        return data
 
 
 class JSONObjDestination(FileDestination):
@@ -128,11 +151,15 @@ class JSONObjDestination(FileDestination):
         super().__init__(file, **kwargs)
         self._encoding = encoding
 
-    def load(self, data: Any):
+    def load(self, data: Any) -> Any:
         """Save the given object to a JSON file.
 
         Args:
             data (Any): The Python Object to be saved.
+
+        Returns:
+            Any: The data that was saved.
         """
         with open(self._file, "w", encoding=self._encoding) as file:
             json.dump(data, fp=file, **self._kwargs)
+        return data

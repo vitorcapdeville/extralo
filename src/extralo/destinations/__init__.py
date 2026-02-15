@@ -7,6 +7,7 @@ from .file import (
     XLSXAppendDestination,
     XLSXDestination,
 )
+from .in_memory import InMemoryDestination
 from .sql import SQLAppendDestination, SQLDestination
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "SparkDeltaLakeDestination",
     "JSONDestination",
     "JSONObjDestination",
+    "InMemoryDestination",
 ]

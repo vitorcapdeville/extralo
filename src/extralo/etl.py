@@ -68,10 +68,11 @@ def _extract(source: Source[T], logger: loguru.Logger) -> T:
     return data
 
 
-def _load(data: T, destination: Destination[T], logger: loguru.Logger) -> None:
+def _load(data: T, destination: Destination[T], logger: loguru.Logger) -> T:
     logger.info(f"Starting load of {len(data)} records to {destination}")
-    destination.load(data)
+    result = destination.load(data)
     logger.info(f"Loaded {len(data)} records to {destination}")
+    return result
 
 
 class ETL(Generic[T]):
@@ -132,11 +133,16 @@ class ETL(Generic[T]):
         self._transformer = transformer
         self._name = name
 
-    def execute(self) -> None:
+    def execute(self) -> dict[str, T]:
         """Execute the ETL process.
 
         Extract the data from the sources, validate it against the before schemas, transform it, validate it against
         the after schemas and load it to the destinations.
+
+        Returns:
+            dict[str, T]: A dictionary mapping destination keys to the loaded data.
+                When multiple destinations share the same key, only the first result is kept
+                (they all receive the same input data).
         """
         self._logger.info(f"Starting ETL process for {self._name}.", status="running")
         self._logger = self._logger.patch(lambda record: record["extra"].update(status="running"))
@@ -150,7 +156,7 @@ class ETL(Generic[T]):
                 self._logger.warning(warn.message)
 
             _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
-            self.load(data)
+            result = self.load(data)
         except Exception as e:
             self._logger.patch(lambda record: record["extra"].update(status="failed")).error(
                 f"Failed to execute ETL process for {self._name}: \n {e}"
@@ -160,6 +166,7 @@ class ETL(Generic[T]):
             self._logger.patch(lambda record: record["extra"].update(status="success")).success(
                 f"ETL process for {self._name} executed successfully."
             )
+            return result
 
     def extract(self) -> dict[str, T]:
         """Extract the data from the provided sources and load it into a dictionary with same keys as the sources.
@@ -197,7 +204,7 @@ class ETL(Generic[T]):
 
         return data
 
-    def load(self, data: dict[str, T]) -> None:
+    def load(self, data: dict[str, T]) -> dict[str, T]:
         """Load the data to the provided destinations.
 
         The data will be loaded in parallel, using threads.
@@ -205,37 +212,57 @@ class ETL(Generic[T]):
         Args:
             data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
 
+        Returns:
+            dict[str, T]: A dictionary mapping each destination key to its loaded data.
+                When multiple destinations share the same key, only the first result is kept.
+
         Raises:
             Exception: If the data could not be loaded to the destination.
         """
-        futures: list[Future[None]] = []
+        futures: dict[str, list[Future[T]]] = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]
-                futures.extend(
+                futures[name] = [
                     executor.submit(partial(_load, data_to_load, destination, logger=self._logger))
                     for destination in destinations
-                )
+                ]
 
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:  # noqa: PERF203
-                    raise Exception(f"Failed to load data: {e}") from e
+            results: dict[str, T] = {}
+            for name, name_futures in futures.items():
+                for future in as_completed(name_futures):
+                    try:
+                        result = future.result()
+                    except Exception as e:  # noqa: PERF203
+                        raise Exception(f"Failed to load data: {e}") from e
+                    else:
+                        # Keep only the first result per key (all destinations get the same data)
+                        if name not in results:
+                            results[name] = result
+
+        return results
 
 
 class ETLSequentialLoad(ETL[T]):
     """Same as ETL, but loads the data sequentially instead of in parallel."""
 
-    def load(self, data: dict[str, T]) -> None:
+    def load(self, data: dict[str, T]) -> dict[str, T]:
         """Load the data to the provided destinations.
 
         The data will be loaded sequentially.
 
         Args:
             data (dict[str, DataFrame]): The data to be loaded. The keys must match the keys of the destinations.
+
+        Returns:
+            dict[str, T]: A dictionary mapping each destination key to its loaded data.
+                When multiple destinations share the same key, only the first result is kept.
         """
+        results: dict[str, T] = {}
         for name, destinations in self._destinations.items():
             data_to_load = data[name]
             for destination in destinations:
-                _load(data_to_load, destination, self._logger)
+                result = _load(data_to_load, destination, self._logger)
+                if name not in results:
+                    results[name] = result
+        return results
