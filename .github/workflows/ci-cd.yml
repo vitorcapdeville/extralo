@@ -29,9 +29,15 @@ jobs:
       - name: install tox
         run: |
           pip install tox>=4.0
-      - name: run tests and docs
-        run: tox --parallel
 
+      - name: run docs
+        run: tox -e docs
+
+      - name: run tests 39
+        run: tox -e py39
+
+      - name: run tests 311
+        run: tox -e py311
       - name: deploy docs
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
