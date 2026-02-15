@@ -33,13 +33,31 @@ class SQLSource:
         self._query = query
         self._params = params or {}
 
+    def _prepare_query(self, query_str: str) -> Any:
+        """Prepare a SQL query, adding expanding bind parameters for list values.
+
+        Args:
+            query_str (str): The SQL query string.
+
+        Returns:
+            TextClause: The prepared SQLAlchemy text clause.
+        """
+        import sqlalchemy as sa  # noqa: PLC0415
+
+        text_query = sa.text(query_str)
+        expanding_params = [
+            sa.bindparam(key, expanding=True) for key, value in self._params.items() if isinstance(value, list)
+        ]
+        if expanding_params:
+            text_query = text_query.bindparams(*expanding_params)
+        return text_query
+
     def extract(self) -> pd.DataFrame:
         """Extracts data from the database using the provided SQL query.
 
         Returns:
             DataFrame: The extracted data as a pandas DataFrame.
         """
-        import sqlalchemy as sa  # noqa: PLC0415
         import sqlalchemy.exc as sa_exc  # noqa: PLC0415
         import sqlparse as sp  # type: ignore  # noqa: PLC0415
 
@@ -47,12 +65,12 @@ class SQLSource:
         with self._engine.begin() as connection:
             for statement in query[:-1]:
                 connection.execute(
-                    sa.text(statement), parameters=self._params, execution_options={"no_parameters": True}
+                    self._prepare_query(statement), parameters=self._params, execution_options={"no_parameters": True}
                 )
             try:
-                data = pd.read_sql(sa.text(query[-1]), connection, params=self._params)  # type: ignore
+                data = pd.read_sql(self._prepare_query(query[-1]), connection, params=self._params)  # type: ignore
             except sa_exc.ProgrammingError:
-                data = pd.read_sql(sa.text(query[-1]), connection)  # type: ignore
+                data = pd.read_sql(self._prepare_query(query[-1]), connection)  # type: ignore
 
         return data
 
