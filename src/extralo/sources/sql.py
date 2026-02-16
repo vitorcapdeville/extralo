@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 import pandas as pd
+from sqlalchemy import BindParameter
 
 
 class SQLSource:
@@ -45,7 +46,7 @@ class SQLSource:
         import sqlalchemy as sa  # noqa: PLC0415
 
         text_query = sa.text(query_str)
-        expanding_params = [
+        expanding_params: list[BindParameter[Any]] = [
             sa.bindparam(key, expanding=True) for key, value in self._params.items() if isinstance(value, list)
         ]
         if expanding_params:
