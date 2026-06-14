@@ -41,6 +41,22 @@ class IncompatibleStepsError(Exception):
         )
 
 
+class ETLStepError(Exception):
+    """Exception raised when a named ETL step fails.
+
+    Attributes:
+        step: ETL step that failed (``extract``, ``transform`` or ``load``).
+        name: Logical source, transformer or destination/output name.
+        component: Source, transformer or destination object that failed.
+    """
+
+    def __init__(self, step: str, name: str, component: object) -> None:
+        self.step = step
+        self.name = name
+        self.component = component
+        super().__init__(f"ETL step '{step}' failed for '{name}' using {component}")
+
+
 def _validate_steps(step1_keys: set[str], step1_name: str, step2_keys: set[str], step2_name: str) -> None:
     if step1_keys != step2_keys:
         raise IncompatibleStepsError(step1_name, step1_keys, step2_name, step2_keys)
@@ -155,13 +171,12 @@ class ETL(Generic[T]):
             for warn in warns:
                 self._logger.warning(warn.message)
 
-            _validate_steps(set(data.keys()), "transform", set(self._destinations.keys()), "load")
             result = self.load(data)
         except Exception as e:
             self._logger.patch(lambda record: record["extra"].update(status="failed")).error(
                 f"Failed to execute ETL process for {self._name}: \n {e}"
             )
-            raise e
+            raise
         else:
             self._logger.patch(lambda record: record["extra"].update(status="success")).success(
                 f"ETL process for {self._name} executed successfully."
@@ -176,11 +191,24 @@ class ETL(Generic[T]):
 
         Returns:
             dict[str, DataFrame]: A dictionary with the data extracted from the sources.
+
+        Raises:
+            ETLStepError: If a source fails while extracting data.
         """
+        results: dict[str, T] = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
-            extracted_data = executor.map(lambda *args: _extract(*args, logger=self._logger), self._sources.values())
-        names = self._sources.keys()
-        return dict(zip(names, extracted_data))
+            futures: dict[Future[T], tuple[str, Source[T]]] = {
+                executor.submit(_extract, source, self._logger): (name, source)
+                for name, source in self._sources.items()
+            }
+            for future in as_completed(futures):
+                name, source = futures[future]
+                try:
+                    results[name] = future.result()
+                except Exception as e:
+                    raise ETLStepError("extract", name, source) from e
+
+        return {name: results[name] for name in self._sources}
 
     def transform(self, data: dict[str, T]) -> dict[str, T]:
         """Transform the data extracted from the source according to the `Transformer` class provided.
@@ -194,12 +222,19 @@ class ETL(Generic[T]):
         Returns:
             dict[str, DataFrame]: A dictionary with the transformed data. The keys could be different from the
                 input data.
+
+        Raises:
+            ETLStepError: If the transformer fails while processing the data.
         """
         if self._transformer is None:
             self._logger.info("Skipping transform step since no Transformer was specified.")
             return data
 
-        data = self._transformer(**data)
+        transformer_name = getattr(self._transformer, "__name__", self._transformer.__class__.__name__)
+        try:
+            data = self._transformer(**data)
+        except Exception as e:
+            raise ETLStepError("transform", str(transformer_name), self._transformer) from e
         self._logger.info(f"Transformed data with {self._transformer}")
 
         return data
@@ -217,16 +252,24 @@ class ETL(Generic[T]):
                 When multiple destinations share the same key, only the first result is kept.
 
         Raises:
-            Exception: If the data could not be loaded to the destination.
+            IncompatibleStepsError: If the data keys do not match the destination keys.
+            ETLStepError: If a destination fails while loading data.
         """
+        data_keys = set(data.keys())
+        destination_keys = set(self._destinations.keys())
+        if data_keys != destination_keys:
+            raise IncompatibleStepsError("transform", data_keys, "load", destination_keys)
+
         futures: dict[str, list[Future[T]]] = {}
+        future_context: dict[Future[T], tuple[str, Destination[T]]] = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
             for name, destinations in self._destinations.items():
                 data_to_load = data[name]
-                futures[name] = [
-                    executor.submit(partial(_load, data_to_load, destination, logger=self._logger))
-                    for destination in destinations
-                ]
+                futures[name] = []
+                for destination in destinations:
+                    future = executor.submit(partial(_load, data_to_load, destination, logger=self._logger))
+                    futures[name].append(future)
+                    future_context[future] = (name, destination)
 
             results: dict[str, T] = {}
             for name, name_futures in futures.items():
@@ -234,7 +277,8 @@ class ETL(Generic[T]):
                     try:
                         result = future.result()
                     except Exception as e:  # noqa: PERF203
-                        raise Exception(f"Failed to load data: {e}") from e
+                        destination_name, destination = future_context[future]
+                        raise ETLStepError("load", destination_name, destination) from e
                     else:
                         # Keep only the first result per key (all destinations get the same data)
                         if name not in results:
@@ -257,12 +301,23 @@ class ETLSequentialLoad(ETL[T]):
         Returns:
             dict[str, T]: A dictionary mapping each destination key to its loaded data.
                 When multiple destinations share the same key, only the first result is kept.
+
+        Raises:
+            IncompatibleStepsError: If the data keys do not match the destination keys.
+            ETLStepError: If a destination fails while loading data.
         """
         results: dict[str, T] = {}
+        data_keys = set(data.keys())
+        destination_keys = set(self._destinations.keys())
+        if data_keys != destination_keys:
+            raise IncompatibleStepsError("transform", data_keys, "load", destination_keys)
         for name, destinations in self._destinations.items():
             data_to_load = data[name]
             for destination in destinations:
-                result = _load(data_to_load, destination, self._logger)
+                try:
+                    result = _load(data_to_load, destination, self._logger)
+                except Exception as e:
+                    raise ETLStepError("load", name, destination) from e
                 if name not in results:
                     results[name] = result
         return results

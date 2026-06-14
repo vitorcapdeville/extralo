@@ -13,7 +13,7 @@ from .destinations import (
     XLSXAppendDestination,
     XLSXDestination,
 )
-from .etl import ETL, ETLSequentialLoad
+from .etl import ETL, ETLSequentialLoad, ETLStepError
 from .sources import (
     CSVSource,
     DeltaLakeSource,
@@ -30,6 +30,7 @@ logger.disable("extralo")
 __all__ = [
     "ETL",
     "ETLSequentialLoad",
+    "ETLStepError",
     "CSVSource",
     "SQLSource",
     "SASSource",
